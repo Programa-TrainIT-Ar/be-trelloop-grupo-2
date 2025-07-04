@@ -2,25 +2,32 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from .config import DATABASE_URL, CORS_ORIGINS
 from .database import db
-from .models import Message
+from .models import User
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 CORS(app, origins=CORS_ORIGINS)
 db.init_app(app)
 
-@app.route("/message", methods=["POST"])
-def post_message():
-     data = request.json
-     msg = Message(content=data["content"])
-     db.session.add(msg)
-     db.session.commit()
-     return jsonify({"id": msg.id, "content": msg.content}), 201
+# User routes
+@app.route("/api/users", methods=["POST"])
+def create_user():
+    data = request.json
+    user = User(
+        name=data['name'],
+        email=data['email']
+    )
+    user.set_password(data['password'])
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    return jsonify(user.to_dict()), 201
 
-@app.route("/message", methods=["GET"])
-def get_messages():
-     msgs = Message.query.all()
-     return jsonify([{"id": m.id, "content": m.content} for m in msgs])
+@app.route("/api/users", methods=["GET"])
+def get_users():
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users])
 
 if __name__ == "__main__":
      with app.app_context():
