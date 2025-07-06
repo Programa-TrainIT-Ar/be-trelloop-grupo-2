@@ -1,28 +1,28 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from .config import DATABASE_URL, CORS_ORIGINS
-from .database import db
-from .models import Message
+from flask_migrate import Migrate
+from .config.config import config
+from .database.database import db
+#ACA SE IMPORTAN LOS MODELOS PARA SER DETECTADOS POR FLASK-MIGRATE
+from .models.user import User
+from .models.message import Message
+from .models.board import Board
+from .models.card import Card
+from .models.list import List
+from .routes import all_blueprints
+
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-CORS(app, origins=CORS_ORIGINS)
+app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
+CORS(app, origins=config["CORS_ORIGINS"])
+
 db.init_app(app)
+migrate = Migrate(app, db)
 
-@app.route("/message", methods=["POST"])
-def post_message():
-     data = request.json
-     msg = Message(content=data["content"])
-     db.session.add(msg)
-     db.session.commit()
-     return jsonify({"id": msg.id, "content": msg.content}), 201
 
-@app.route("/message", methods=["GET"])
-def get_messages():
-     msgs = Message.query.all()
-     return jsonify([{"id": m.id, "content": m.content} for m in msgs])
+
+for bp in all_blueprints:
+    app.register_blueprint(bp)
 
 if __name__ == "__main__":
-     with app.app_context():
-          db.create_all()
      app.run(host="0.0.0.0", port=5000)
