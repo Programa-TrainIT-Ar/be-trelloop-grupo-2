@@ -21,14 +21,11 @@ def login_users():
     if user ==None:
         return jsonify({"message": "Usuario no encontrado"}), 404
     
-    password_bytes = bytes(password, 'utf-8')   
-    password_matching = bcrypt.checkpw(password_bytes, user.password.encode('utf-8'))
-    if password_matching:
+    if user.check_password(password):
         access_token = create_access_token(identity=email)
         return jsonify({"token": access_token,
                         "user" : user.to_dict()})
     return jsonify({"message": "Contraseña Invalida"}), 401
-
 
 def create_users():
     data = request.json
