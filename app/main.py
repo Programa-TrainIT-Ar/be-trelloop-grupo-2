@@ -3,12 +3,8 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from .config.config import config
 from .database.database import db
-#ACA SE IMPORTAN LOS MODELOS PARA SER DETECTADOS POR FLASK-MIGRATE
+# ACA SE IMPORTAN LOS MODELOS PARA SER DETECTADOS POR FLASK-MIGRATE
 from .models.user import User
-from .models.message import Message
-from .models.board import Board
-from .models.card import Card
-from .models.list import List
 from .routes import all_blueprints
 
 
