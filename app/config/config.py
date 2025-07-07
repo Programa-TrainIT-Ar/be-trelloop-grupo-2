@@ -13,6 +13,7 @@ config = {
     "DATABASE_URL" : get_env_variable("DATABASE_URL"),
     "JWT_SECRET_KEY" : get_env_variable("JWT_SECRET_KEY"),
     "CORS_ORIGINS" : get_env_variable("CORS_ORIGINS").split(","),
+    "JWT_ACCESS_TOKEN_EXPIRES": int(get_env_variable("JWT_ACCESS_TOKEN_EXPIRES"))
 }
 
 

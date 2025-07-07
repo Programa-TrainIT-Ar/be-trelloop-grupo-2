@@ -4,21 +4,20 @@ from flask_migrate import Migrate
 from .config.config import config
 from .database.database import db
 #ACA SE IMPORTAN LOS MODELOS PARA SER DETECTADOS POR FLASK-MIGRATE
-from .models.user import User
-from .models.message import Message
-from .models.board import Board
-from .models.card import Card
-from .models.list import List
+from .models import User, Board , List, Card, CardComment, CardAssignee
 from .routes import all_blueprints
-
+from flask_jwt_extended import JWTManager
+from datetime import timedelta
 
 app = Flask(__name__)
+app.config["JWT_SECRET_KEY"] = config["JWT_SECRET_KEY"]
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=config["JWT_ACCESS_TOKEN_EXPIRES"])
 app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
 CORS(app, origins=config["CORS_ORIGINS"])
 
 db.init_app(app)
 migrate = Migrate(app, db)
-
+jwt = JWTManager(app)
 
 
 for bp in all_blueprints:
