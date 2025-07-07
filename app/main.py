@@ -11,10 +11,11 @@ from .models.card import Card
 from .models.list import List
 from .routes import all_blueprints
 from flask_jwt_extended import JWTManager
-
+from datetime import timedelta
 
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = config["JWT_SECRET_KEY"]
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=config["JWT_ACCESS_TOKEN_EXPIRES"])
 app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
 CORS(app, origins=config["CORS_ORIGINS"])
 
