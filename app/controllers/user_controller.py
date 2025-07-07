@@ -16,28 +16,15 @@ def login_users():
     password = data.get("password", None)
     if email ==None or password==None:
         return jsonify({"message": "Falta el correo o la contraseña"}), 400
-    user = User.query.filter_by(email=email).first
+    user = User.query.filter_by(email=email).first()
 
     if user ==None:
         return jsonify({"message": "Usuario no encontrado"}), 404
-    
-    if user.check_password(password):
+    password_matching = user.check_password(password)
+
+    if password_matching:
         access_token = create_access_token(identity=email)
         return jsonify({"token": access_token,
                         "user" : user.to_dict()})
-    return jsonify({"message": "Contraseña Invalida"}), 401
+    return jsonify({"message": "Usuario o contraseña invalida"}), 401
 
-def create_users():
-    data = request.json
-    user = User(
-        name = data["name"],
-        email = data["email"]
-    )
-    user.set_password(data["password"])
-    
-    db.session.add(user)
-    db.session.commit()
-    
-    logger.info(f"Usuario creado: {user.email}")
-
-    return jsonify({"message": "Usuario creado exitosamente"}), 201
