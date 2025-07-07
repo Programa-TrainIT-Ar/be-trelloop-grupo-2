@@ -10,15 +10,17 @@ from .models.board import Board
 from .models.card import Card
 from .models.list import List
 from .routes import all_blueprints
+from flask_jwt_extended import JWTManager
 
 
 app = Flask(__name__)
+app.config["JWT_SECRET_KEY"] = config["JWT_SECRET_KEY"]
 app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
 CORS(app, origins=config["CORS_ORIGINS"])
 
 db.init_app(app)
 migrate = Migrate(app, db)
-
+jwt = JWTManager(app)
 
 
 for bp in all_blueprints:
