@@ -1,8 +1,4 @@
-from .database import db
-from datetime import datetime
-from flask_bcrypt import Bcrypt
-
-bcrypt = Bcrypt()
+from ..database.database import db
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
