@@ -9,7 +9,7 @@ def get_users():
     users = User.query.all()
     return jsonify([user.to_dict() for user in users])
 
-'''def create_users():
+def create_users():
     data = request.json
     user = User(
         name = data["name"],
@@ -23,10 +23,10 @@ def get_users():
     logger.info(f"Usuario creado: {user.email}")
 
     return jsonify({"message": "Usuario creado exitosamente"}), 201
-'''
+
 
 #REGISTER USER
-def register_user():
+def register_user(data):
     """
     Función para registrar un nuevo usuario con validaciones completas
     Maneja el proceso completo de registro según los criterios de aceptación
