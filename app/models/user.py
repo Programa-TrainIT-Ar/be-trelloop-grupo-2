@@ -8,6 +8,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
+    lastname = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -27,6 +28,7 @@ class User(db.Model):
         return {
             'id': self.id,
             'name': self.name,
+            'lastname': self.lastname,
             'email': self.email,
             'created_at': self.created_at.isoformat()
         } 
