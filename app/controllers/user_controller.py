@@ -28,3 +28,5 @@ def login_users():
                         "user" : user.to_dict()})
     return jsonify({"message": "Usuario o contraseña invalida"}), 401
 
+def protected_users():
+    return jsonify({"message": "This is a protected route"})
