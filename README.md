@@ -2,7 +2,7 @@
 
 ### 0 A una carpeta ya inicializada, añadir el origin remoto
 
-`git remote add origin https://github.com/kev-torrico/proyecto_simulacion_prueba`
+`git remote add origin https://github.com/Programa-TrainIT-Ar/be-trelloop-grupo-2`
 
 ### 0.1 Hacer un git pull a la rama local main
 
