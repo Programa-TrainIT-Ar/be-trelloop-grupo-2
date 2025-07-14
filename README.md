@@ -142,3 +142,130 @@ Authorization: Bearer <token_jwt>
   "message": "This is a protected route"
 }
 ```
+
+## 👥 Endpoints de registro
+### Registrar nuevo usuario
+### Este endpoint no requiere autenticación (es público).
+```
+POST /api/users/register
+```
+### Descripción:
+**Registra un nuevo usuario en el sistema con validaciones completas para los datos proporcionados.**
+
+**Body:**
+```JSON
+
+{
+    "name": "Juan",
+    "last_name": "Perez",
+    "email": "juan.perez@example.com",
+    "password": "Password123!",
+    "confirm_password": "Password123!"
+}
+```
+
+**Respuesta exitosa (201 - Created):**
+
+```JSON
+
+{
+  "success": true,
+  "message": "Usuario registrado exitosamente"
+}
+```
+
+**Errores posibles (400 - Bad Request):**
+
+El endpoint puede devolver un código 400 con mensajes específicos indicando la causa del error en el campo message.
+
+Faltan campos obligatorios:
+```JSON
+
+{
+  "success": false,
+  "message": "El campo 'name' es obligatorio"
+}
+```
+(o last_name, email, password, confirm_password si falta alguno).
+
+**Nombre/Apellido inválido:**
+```JSON
+
+{
+  "success": false,
+  "message": "El nombre debe tener al menos 3 caracteres"
+}
+```
+```JSON
+
+{
+  "success": false,
+  "message": "El apellido debe tener al menos 3 caracteres"
+}
+```
+**Correo electrónico inválido:**
+```JSON
+
+{
+  "success": false,
+  "message": "Email inválido"
+}
+```
+**Contraseña demasiado corta:**
+```JSON
+
+{
+  "success": false,
+  "message": "La contraseña debe tener al menos 8 caracteres"
+}
+```
+**Contraseña sin mayúscula:**
+```JSON
+
+{
+  "success": false,
+  "message": "La contraseña debe contener al menos una letra mayúscula"
+}
+```
+**Contraseña sin número:**
+```JSON
+
+{
+  "success": false,
+  "message": "La contraseña debe contener al menos un número"
+}
+```
+**Contraseña sin carácter especial:**
+```JSON
+
+{
+  "success": false,
+  "message": "La contraseña debe contener al menos un caracter especial"
+}
+```
+**Contraseñas no coinciden:**
+```JSON
+
+{
+  "success": false,
+  "message": "Las contraseñas no coinciden"
+}
+```
+**Email ya registrado:**
+```JSON
+
+{
+  "success": false,
+  "message": "Ya existe un usuario registrado con este email"
+}
+```
+**Error general (500 - Internal Server Error):**
+
+**Error interno del servidor:**
+```JSON
+
+{
+  "success": false,
+  "message": "Error al registrar usuario"
+}
+```
