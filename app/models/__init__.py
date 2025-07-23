@@ -1,12 +1,13 @@
 from .user import User
-from .board import Board, BoardMember
+from .board import Board
 from .list import List
 from .card import Card, CardComment, CardAssignee
+from .relationships import UserBoard
 
-all = [
+__all__ = [
     'User',
-    'Board', 
-    'BoardMember',
+    'Board',
+    'UserBoard',
     'List',
     'Card',
     'CardComment',
