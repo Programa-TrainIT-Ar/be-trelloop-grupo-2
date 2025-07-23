@@ -12,7 +12,7 @@ git init
 git remote add origin https://github.com/Programa-TrainIT-Ar/be-trelloop-grupo-2
 ```
 
-### 0.1. Hacer un git pull
+### 0.2. Hacer un git pull
 ```bash 
 git pull origin main
 ```
