@@ -1,15 +1,20 @@
 # 🚀 INSTALACIÓN DEL PROYECTO
 
-Sigue estos pasos para clonar y preparar el proyecto en tu entorno local:
+Sigue estos pasos para preparar el proyecto en tu entorno local:
 
-### 0. Clonar el repositorio
+### 0.1 Inicializar el repositorio con git init
 
 ```bash 
-git clone https://github.com/Programa-TrainIT-Ar/be-trelloop-grupo-2.git
+git init
 ```
-### 0.1. Ingresar al directorio del proyecto
+### 0.1. En la carpeta inicializada 
 ```bash 
-cd be-trelloop-grupo-2
+git remote add origin https://github.com/Programa-TrainIT-Ar/be-trelloop-grupo-2
+```
+
+### 0.1. Hacer un git pull
+```bash 
+git pull origin main
 ```
 
 ### 1. Crear un entorno virtual en el root
