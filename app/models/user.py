@@ -13,6 +13,8 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    boards = db.relationship('Board', secondary='user_board', back_populates= "members")
+
     def set_password(self, password):
         
         salt = bcrypt.gensalt()
@@ -30,5 +32,14 @@ class User(db.Model):
             'name': self.name,
             'last_name': self.last_name,
             'email': self.email,
-            'created_at': self.created_at.isoformat()
-        } 
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "boards": [board.to_dict_basic() for board in self.boards]  
+    }
+
+    def to_dict_basic(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "last_name": self.last_name,
+            "email": self.email
+        }
