@@ -4,9 +4,7 @@ from flask_migrate import Migrate
 from .config.config import config
 from .database.database import db
 #ACA SE IMPORTAN LOS MODELOS PARA SER DETECTADOS POR FLASK-MIGRATE
-from .models import User, Board , List, Card, CardComment, CardAssignee
-# ACA SE IMPORTAN LOS MODELOS PARA SER DETECTADOS POR FLASK-MIGRATE
-from .models.user import User
+from .models import User, Board , List, Card, CardComment, CardAssignee, UserBoard
 from .routes import all_blueprints
 from flask_jwt_extended import JWTManager
 from datetime import timedelta
