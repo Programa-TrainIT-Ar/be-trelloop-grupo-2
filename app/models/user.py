@@ -32,6 +32,6 @@ class User(db.Model):
             'name': self.name,
             'last_name': self.last_name,
             'email': self.email,
-            'boards': self.boards,
-            'created_at': self.created_at.isoformat()
-        } 
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "boards": [board.to_dict_basic() for board in self.boards]  
+    }
