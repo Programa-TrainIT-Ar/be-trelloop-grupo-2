@@ -2,7 +2,7 @@ from ..database.database import db
 from datetime import datetime
 import enum
 from sqlalchemy import Enum as SQLEnum
-
+from .relationships import board_tag
 class BoardStatusEnum(enum.Enum):
     PUBLIC = "public"
     PRIVATE = "private"
@@ -21,6 +21,7 @@ class Board(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     members = db.relationship('User', secondary='user_board', back_populates="boards")
+    tags = db.relationship('Tag', secondary=board_tag, back_populates='boards')
     
     def to_dict(self):
         """Convert board to dictionary for API responses"""
@@ -31,8 +32,13 @@ class Board(db.Model):
             'owner_id': self.owner_id,
             'status': self.status,
             'board_image_url': self.board_image_url,
-            'members': self.members,
+            'members': [member.to_dict_basic() for member in self.members],
+            'tags': [tag.name for tag in self.tags],
             'created_at': self.created_at.isoformat()
         }
-
+    
+    def to_dict_basic(self):
+        return {
+            'name': self.name
+    }
 
