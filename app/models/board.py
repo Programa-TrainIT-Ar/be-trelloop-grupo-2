@@ -30,7 +30,7 @@ class Board(db.Model):
             'name': self.name,
             'description': self.description,
             'owner_id': self.owner_id,
-            'status': self.status,
+            'status': self.status.value,
             'board_image_url': self.board_image_url,
             'members': [member.to_dict_basic() for member in self.members],
             'tags': [tag.name for tag in self.tags],

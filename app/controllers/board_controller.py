@@ -67,4 +67,33 @@ def create_board():
         return jsonify({
             "success": False,
             "message": "Error al crear una tabla"}), 500
+
+
+def get_all_boards():
+    try:
+        boards = Board.query.all()
+        board_list = [board.to_dict() for board in boards]
+        return jsonify(board_list), 200
+    except Exception as e:
+        logger.error(f"Error al obtener boards: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error al obtener las boards"
+        }), 500
+
+def get_board_by_id(board_id):
+    try:
+        board = Board.query.get(board_id)
+        if board is None:
+            return jsonify({
+                "success": False,
+                "message": "Board no encontrada"
+            }), 404
+        return jsonify(board.to_dict()), 200
+    except Exception as e:
+        logger.error(f"Error al obtener board: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error al obtener la board"
+        }), 500
         

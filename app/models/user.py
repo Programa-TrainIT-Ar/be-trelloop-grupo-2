@@ -35,3 +35,11 @@ class User(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "boards": [board.to_dict_basic() for board in self.boards]  
     }
+
+    def to_dict_basic(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "last_name": self.last_name,
+            "email": self.email
+        }
