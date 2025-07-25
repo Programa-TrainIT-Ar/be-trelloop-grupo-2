@@ -1,8 +1,10 @@
 from app.models.user import User
 from app.models.board import Board
 from app.models.tag import Tag
+from app.models.relationships import UserBoard
 from app.database.database import db
 from flask import jsonify ,request
+from flask_jwt_extended import get_jwt_identity
 from ..logs.logger import logger
 
 #CRUD FOR BOARD
@@ -97,3 +99,37 @@ def get_board_by_id(board_id):
             "message": "Error al obtener la board"
         }), 500
         
+def get_boards_by_user():
+    try:
+        user_id = get_jwt_identity()
+
+        boards = (
+            db.session.query(Board.id, Board.name, Board.last_used, Board.created_at)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id)
+            .all()
+        )
+
+        if not boards:
+            return jsonify({
+                "message": "No perteneces a ningún tablero.",
+                "boards": []
+            }), 200
+
+        board_list = [
+            {
+                "id": b.id,
+                "name": b.name,
+                "last_used": b.last_used.isoformat() if b.last_used else None,
+                "created_at": b.created_at.isoformat()
+            } for b in boards
+        ]
+
+        return jsonify({"boards": board_list}), 200
+
+    except Exception as e:
+        logger.error(f"Error al obtener tableros del usuario: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error al obtener tus tableros"
+        }), 500
