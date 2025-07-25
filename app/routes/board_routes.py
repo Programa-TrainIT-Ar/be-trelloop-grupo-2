@@ -12,12 +12,10 @@ def handle_create_board():
     return create_board()
 
 @board_bp.route('/', methods=['GET'])
-@jwt_required()
 def handle_get_all_boards():
     return get_all_boards()
 
 @board_bp.route('/<int:board_id>', methods=['GET'])
-@jwt_required()
 def handle_get_board_by_id(board_id):
     return get_board_by_id(board_id)
 

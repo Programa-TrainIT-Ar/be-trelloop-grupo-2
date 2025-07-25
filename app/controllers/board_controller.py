@@ -12,16 +12,17 @@ from ..logs.logger import logger
 def create_board():
     data= request.json
     try:
+        user_id = int(get_jwt_identity())
         name = data.get("name", None)
         description = data.get("description")
-        owner_id = data.get("ownerId", None)
+        owner_id = user_id
         status = data.get("status", "PRIVATE").upper()
         board_image_url = data.get("boardImageUrl")
         tag_names = data.get('tags', [])
         member_ids = data.get('members', [])
 
-        if name==None or owner_id==None:
-            return jsonify({'error': f"Faltan campos obligatorios 'name' o 'ownerId' " }), 400
+        if not name:
+            return jsonify({'error': f"Faltan campos obligatorios 'name'" }), 400
 
         new_board = Board(
             name=name,
@@ -30,6 +31,16 @@ def create_board():
             status=status,
             board_image_url=board_image_url
         )
+
+        for user_id in member_ids:
+            user = User.query.get(user_id)
+            if user and user.id != owner_id:  
+                new_board.members.append(user)
+        
+        owner = User.query.get(owner_id)
+        if owner and owner.id not in new_board.members:
+            new_board.members.append(owner)
+
         db.session.add(new_board)
         
         for tag_name in tag_names:
@@ -44,16 +55,6 @@ def create_board():
 
             new_board.tags.append(tag)
     
-        for user_id in member_ids:
-            user = User.query.get(user_id)
-            if user and user.id != owner_id:  
-                new_board.members.append(user)
-        
-        owner = User.query.get(owner_id)
-        if owner and owner not in new_board.members:
-            new_board.members.append(owner)
-
-        db.session.add(new_board)
         db.session.commit()
         
         logger.info(f"Tabla creada exitosamente: {new_board.name}")
@@ -101,10 +102,10 @@ def get_board_by_id(board_id):
         
 def get_boards_by_user():
     try:
-        user_id = get_jwt_identity()
-
+        user_id = int(get_jwt_identity())
+        logger.info(f"🔑 Usuario autenticado con ID: {user_id}")
         boards = (
-            db.session.query(Board.id, Board.name, Board.last_used, Board.created_at)
+            db.session.query(Board.id, Board.name, Board.created_at)
             .join(UserBoard, UserBoard.board_id == Board.id)
             .filter(UserBoard.user_id == user_id)
             .all()
@@ -120,7 +121,6 @@ def get_boards_by_user():
             {
                 "id": b.id,
                 "name": b.name,
-                "last_used": b.last_used.isoformat() if b.last_used else None,
                 "created_at": b.created_at.isoformat()
             } for b in boards
         ]
