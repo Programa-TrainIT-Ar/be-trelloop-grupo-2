@@ -4,16 +4,19 @@ Sigue estos pasos para preparar el proyecto en tu entorno local:
 
 ### 0.1 Inicializar el repositorio con git init
 
-```bash 
+```bash
 git init
 ```
-### 0.1. En la carpeta inicializada 
-```bash 
+
+### 0.1. En la carpeta inicializada
+
+```bash
 git remote add origin https://github.com/Programa-TrainIT-Ar/be-trelloop-grupo-2
 ```
 
 ### 0.2. Hacer un git pull
-```bash 
+
+```bash
 git pull origin main
 ```
 
@@ -56,6 +59,7 @@ flask db upgrade
 ```bash
 python -m app.seed_users
 ```
+
 ### 9. Inicializar la aplicacion flask.
 
 ```bash
@@ -76,17 +80,16 @@ La API utiliza JWT (JSON Web Tokens) para la autenticación. Para acceder a endp
 Authorization: Bearer <tu_token_jwt>
 ```
 
-
-
 ## 👥 Endpoints de Usuarios
 
-
 ### Obtener todos los usuarios
+
 ```http
 GET /api/users/
 ```
 
 **Respuesta exitosa (200):**
+
 ```json
 [
   {
@@ -100,19 +103,22 @@ GET /api/users/
 ```
 
 ### Iniciar sesión
+
 ```http
 POST /api/users/login
 ```
 
 **Body:**
+
 ```json
 {
-    "email": "juan@ejemplo.com",
-    "password": "password123"
+  "email": "juan@ejemplo.com",
+  "password": "password123"
 }
 ```
 
 **Respuesta exitosa (200):**
+
 ```json
 {
   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
@@ -127,21 +133,25 @@ POST /api/users/login
 ```
 
 **Errores posibles:**
+
 - `400`: Falta el correo o la contraseña
 - `401`: Usuario o contraseña inválida
 - `404`: Usuario no encontrado
 
 ### Ruta protegida (requiere autenticación)
+
 ```http
 GET /api/users/protected
 ```
 
 **Headers requeridos:**
+
 ```
 Authorization: Bearer <token_jwt>
 ```
 
 **Respuesta exitosa (200):**
+
 ```json
 {
   "message": "This is a protected route"
@@ -149,15 +159,21 @@ Authorization: Bearer <token_jwt>
 ```
 
 ## 👥 Endpoints de registro
+
 ### Registrar nuevo usuario
+
 ### Este endpoint no requiere autenticación (es público).
+
 ```
 POST /api/users/register
 ```
+
 ### Descripción:
+
 **Registra un nuevo usuario en el sistema con validaciones completas para los datos proporcionados.**
 
 **Body:**
+
 ```JSON
 
 {
@@ -184,6 +200,7 @@ POST /api/users/register
 El endpoint puede devolver un código 400 con mensajes específicos indicando la causa del error en el campo message.
 
 Faltan campos obligatorios:
+
 ```JSON
 
 {
@@ -191,9 +208,11 @@ Faltan campos obligatorios:
   "message": "El campo 'name' es obligatorio"
 }
 ```
+
 (o last_name, email, password, confirm_password si falta alguno).
 
 **Nombre/Apellido inválido:**
+
 ```JSON
 
 {
@@ -201,6 +220,7 @@ Faltan campos obligatorios:
   "message": "El nombre debe tener al menos 3 caracteres"
 }
 ```
+
 ```JSON
 
 {
@@ -208,7 +228,9 @@ Faltan campos obligatorios:
   "message": "El apellido debe tener al menos 3 caracteres"
 }
 ```
+
 **Correo electrónico inválido:**
+
 ```JSON
 
 {
@@ -216,7 +238,9 @@ Faltan campos obligatorios:
   "message": "Email inválido"
 }
 ```
+
 **Contraseña demasiado corta:**
+
 ```JSON
 
 {
@@ -224,7 +248,9 @@ Faltan campos obligatorios:
   "message": "La contraseña debe tener al menos 8 caracteres"
 }
 ```
+
 **Contraseña sin mayúscula:**
+
 ```JSON
 
 {
@@ -232,7 +258,9 @@ Faltan campos obligatorios:
   "message": "La contraseña debe contener al menos una letra mayúscula"
 }
 ```
+
 **Contraseña sin número:**
+
 ```JSON
 
 {
@@ -240,7 +268,9 @@ Faltan campos obligatorios:
   "message": "La contraseña debe contener al menos un número"
 }
 ```
+
 **Contraseña sin carácter especial:**
+
 ```JSON
 
 {
@@ -248,7 +278,9 @@ Faltan campos obligatorios:
   "message": "La contraseña debe contener al menos un caracter especial"
 }
 ```
+
 **Contraseñas no coinciden:**
+
 ```JSON
 
 {
@@ -256,7 +288,9 @@ Faltan campos obligatorios:
   "message": "Las contraseñas no coinciden"
 }
 ```
+
 **Email ya registrado:**
+
 ```JSON
 
 {
@@ -264,9 +298,11 @@ Faltan campos obligatorios:
   "message": "Ya existe un usuario registrado con este email"
 }
 ```
+
 **Error general (500 - Internal Server Error):**
 
 **Error interno del servidor:**
+
 ```JSON
 
 {
@@ -274,3 +310,193 @@ Faltan campos obligatorios:
   "message": "Error al registrar usuario"
 }
 ```
+
+## 🗂️ Endpoints de Usuarios
+
+### Obtener todos los tableros creados
+
+### Este endpoint no requiere autenticación (es público).
+
+```
+GET /api/boards
+```
+
+### Descripción:
+
+**Este endpoint permite obtener todos los tableros creados por todos los usuarios.
+.**
+
+**Respuesta exitosa (200 - OK):**
+
+```JSON
+[
+  {
+    "board_image_url": "https://proyectoEjemplo.com",
+    "created_at": "2025-07-23T00:00:00",
+    "description": "Esta es un board de ejemplo",
+    "id": 1,
+    "members": [
+      {
+        "email": "juan@gmail.com",
+        "id": 1,
+        "last_name": "Perez",
+        "name": "Juan"
+      },
+      {
+        "email": "juanita@gmail.com",
+        "id": 2,
+        "last_name": "Perez",
+        "name": "Juanita"
+      }
+    ],
+    "name": "Board 1",
+    "owner_id": 1,
+    "status": "private",
+    "tags": []
+  },
+  {
+    "board_image_url": "https://proyectoEjemplo2.com",
+    "created_at": "2025-07-24T15:12:02.414133",
+    "description": "Esta es otro board de ejemplo",
+    "id": 2,
+    "members": [
+      {
+        "email": "juanita@gmail.com",
+        "id": 2,
+        "last_name": "Perez",
+        "name": "Juanita"
+      }
+    ],
+    "name": "Board 2",
+    "owner_id": 2,
+    "status": "public",
+    "tags": [
+      "frontend",
+      "backend",
+      "urgente"
+    ]
+  }
+]
+
+```
+
+**Errores posibles (500 - Internal Server Error):**
+
+### Obtener tablero por ID
+
+### Este endpoint no requiere autenticación (es público).
+
+```
+GET /api/boards/{id}
+```
+
+### Descripción:
+
+**Este endpoint permite obtener un único tablero según su identificador.
+.**
+
+**Respuesta exitosa (200 - OK):**
+
+```JSON
+[
+  {
+    "board_image_url": "https://proyectoEjemplo.com",
+    "created_at": "2025-07-23T00:00:00",
+    "description": "Esta es un board de ejemplo",
+    "id": 1,
+    "members": [
+      {
+        "email": "juan@gmail.com",
+        "id": 1,
+        "last_name": "Perez",
+        "name": "Juan"
+      },
+      {
+        "email": "juanita@gmail.com",
+        "id": 2,
+        "last_name": "Perez",
+        "name": "Juanita"
+      }
+    ],
+    "name": "Board 1",
+    "owner_id": 1,
+    "status": "private",
+    "tags": []
+  }
+  ]
+
+```
+
+**Errores posibles (500 - Internal Server Error):**
+**Errores posibles (404 - Board no encontrada):**
+
+### Crear un tablero
+
+### Este endpoint requiere autenticación (no es público).
+
+```
+POST /api/boards
+```
+
+### Descripción:
+
+**Este endpoint permite crear un nuevo tablero para un usuario autenticado, incluyendo su nombre,imagen , descripción y estado, el cual debe ser "private" o "public". También se debe proporcionar una lista de miembros (usuarios ya registrados) que serán añadidos al tablero, así como una lista de etiquetas (tags); si una etiqueta no existe en la base de datos, se crea automáticamente, y si ya existe, se reutiliza.
+.**
+**Respuesta exitosa (201 - CREATED):**
+
+### Payload
+
+```JSON
+{
+"name": "Tablero Prueba",
+"description": "Este es un tablero de prueba",
+"status": "private",
+"boardImageUrl": "https://tableroPrueba.com",
+"members": [3, 4],
+"tags": ["Web", "backend", "cocina"]
+}
+```
+
+**Errores posibles (500 - Internal Server Error):**
+**Errores posibles (401 - UNAUTHORIZED):**
+**Falta nombre de tablero (400 - BAD REQUEST):**
+
+### Obtener tableros de un usuario autenticado
+
+### Este endpoint requiere autenticación (no es público).
+
+```
+GET /api/boards/member
+```
+
+### Descripción:
+
+**Este endpoint permite obtener todos los tableros en los que el usuario autenticado es miembro, incluyendo aquellos que ha creado, ya que al crear un tablero automáticamente se le asigna como miembro.
+.**
+
+**Respuesta exitosa (200 - CREATED):**
+
+```JSON
+{
+  "boards": [
+    {
+    "created_at": "2025-07-28T02:47:30.761384",
+    "id": 1,
+    "name": "Tablero Prueba 1"
+    },
+    {
+    "created_at": "2025-07-28T02:51:21.348853",
+    "id": 2,
+    "name": "Tablero Prueba 2"
+    },
+    {
+    "created_at": "2025-07-29T15:17:07.531928",
+    "id": 3,
+    "name": "Tablero Prueba 3"
+    }
+  ]
+}
+```
+
+**Errores posibles (500 - Internal Server Error):**
+**Errores posibles (401 - UNAUTHORIZED):**
