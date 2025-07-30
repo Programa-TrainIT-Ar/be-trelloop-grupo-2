@@ -25,7 +25,7 @@ def login_users():
     password_matching = user.check_password(password)
 
     if password_matching:
-        access_token = create_access_token(identity=email)
+        access_token = create_access_token(identity=str(user.id))
         return jsonify({"token": access_token,
                         "user" : user.to_dict_basic()})
     return jsonify({"message": "Usuario o contraseña invalida"}), 401
