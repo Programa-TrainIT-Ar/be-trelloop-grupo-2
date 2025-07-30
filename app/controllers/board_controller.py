@@ -105,7 +105,7 @@ def get_boards_by_user():
         user_id = int(get_jwt_identity())
         logger.info(f"🔑 Usuario autenticado con ID: {user_id}")
         boards = (
-            db.session.query(Board.id, Board.name, Board.created_at)
+            db.session.query(Board)
             .join(UserBoard, UserBoard.board_id == Board.id)
             .filter(UserBoard.user_id == user_id)
             .all()
@@ -121,6 +121,15 @@ def get_boards_by_user():
             {
                 "id": b.id,
                 "name": b.name,
+                "boardImageUrl": b.board_image_url,
+                "description": b.description,
+                "members": [
+                    {
+                        "id": m.id,
+                        "name": m.name,
+                        "lastName": m.last_name  
+                    } for m in b.members
+                ],
                 "created_at": b.created_at.isoformat()
             } for b in boards
         ]
