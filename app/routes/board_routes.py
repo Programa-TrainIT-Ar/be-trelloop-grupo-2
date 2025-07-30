@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
-
 from ..controllers.board_controller import create_board, get_all_boards, get_board_by_id
+from flasgger.utils import swag_from
+
 
 board_bp = Blueprint('board', __name__, url_prefix='/api/boards')
 
