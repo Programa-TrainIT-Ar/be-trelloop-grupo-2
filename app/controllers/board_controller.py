@@ -142,3 +142,90 @@ def get_boards_by_user():
             "success": False,
             "message": "Error al obtener tus tableros"
         }), 500
+    
+def update_board(board_id):
+    user_id = int(get_jwt_identity())
+    searched_board = (
+            db.session.query(Board)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id,
+                    Board.id == board_id)
+            .first()
+        )
+    if searched_board is None:
+        return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
+    
+    data = request.json
+    if not data: 
+        return jsonify({"error": "Los datos no fueron provistos"}), 400
+    
+    
+    new_name = data.get("name", None)
+    owner_id = user_id
+    new_description = data.get("description", None)
+    new_status = data.get("status", "PRIVATE").upper()
+    new_board_image_url = data.get("boardImageUrl", None)
+    new_tag_names = data.get('tags', [])
+    new_member_ids = data.get('members', [])
+
+    if new_status in ["PRIVATE", "PUBLIC"]:
+        searched_board.status = new_status
+    else:
+        return jsonify({"error": "El status debe ser PRIVATE o PUBLIC"}), 400
+
+    if not isinstance(new_tag_names, list):
+        return jsonify({"error": "Tags debe ser una lista"}), 400
+    if not isinstance(new_member_ids, list):
+        return jsonify({"error": "Members debe ser una lista"}), 400
+  
+    if new_name != None:
+        searched_board.name = new_name
+    if new_description != None:
+        searched_board.description = new_description
+    if new_board_image_url!= None:
+        searched_board.board_image_url = new_board_image_url
+    searched_board.status = new_status
+
+    if new_tag_names:
+        searched_board.tags = [] 
+        for new_tag_name in new_tag_names:
+            new_tag_name = new_tag_name.strip().lower()
+            if not new_tag_name:
+                continue
+            found_tag = Tag.query.filter_by(name=new_tag_name).first()
+            if not found_tag:
+                tag = Tag(name=new_tag_name)
+                db.session.add(tag)
+                searched_board.tags.append(tag)
+            else:
+                searched_board.tags.append(found_tag)
+
+    if new_member_ids:
+        found_members = User.query.filter(User.id.in_(new_member_ids)).all()
+        owner = User.query.get(owner_id)
+        if owner not in found_members:
+            found_members.append(owner)
+        searched_board.members = found_members
+
+    db.session.commit()
+    return jsonify({"message": f"Tablero con id: {board_id} actualizado correctamente"}), 200
+
+def delete_board(board_id):
+    user_id = int(get_jwt_identity())
+    searched_board = (
+            db.session.query(Board)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id,
+                    Board.id == board_id)
+            .first()
+        )
+    if searched_board is None:
+        return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
+    
+    if searched_board.owner_id != user_id:
+     return jsonify({"error": "No tienes permiso para eliminar este tablero"}), 403
+
+    board_data = searched_board.to_dict()
+    db.session.delete(searched_board)
+    db.session.commit()
+    return jsonify(board_data), 202
