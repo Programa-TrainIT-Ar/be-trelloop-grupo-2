@@ -1,0 +1,99 @@
+tags:
+  - Boards
+summary: Crea un nuevo tablero.
+operationId: createBoard
+description: |
+  Este endpoint permite a un usuario autenticado crear un nuevo tablero.
+  El usuario autenticado se establecerá automáticamente como el `owner_id`.
+  Se pueden añadir miembros y etiquetas opcionales al crear el tablero.
+security:
+  - BearerAuth: []
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Nombre del tablero. Es un campo obligatorio.
+          example: Mi Nuevo Tablero de Proyecto
+        description:
+          type: string
+          description: Descripción detallada del tablero. Opcional.
+          example: Un tablero para organizar las tareas del proyecto X.
+        status:
+          type: string
+          description: |
+            Estado de visibilidad del tablero. Opcional.
+            Si no se especifica, el valor por defecto es 'PRIVATE'.
+          enum:
+            - PUBLIC
+            - PRIVATE
+          default: PRIVATE
+          example: PRIVATE
+        boardImageUrl:
+          type: string
+          format: url
+          description: URL de una imagen para el tablero. Opcional.
+          example: https://example.com/board_image.jpg
+        tags:
+          type: array
+          description: Lista de nombres de etiquetas para asociar con el tablero. Las etiquetas que no existan serán creadas. Opcional.
+          items:
+            type: string
+          example: ["desarrollo", "prioridad alta"]
+        members:
+          type: array
+          description: Lista de IDs de usuarios a añadir como miembros del tablero. El propietario del tablero se añade automáticamente si no está incluido. Opcional.
+          items:
+            type: integer
+          example: [2, 3, 5] # IDs de otros usuarios
+responses:
+  201:
+    description: Tablero creado exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Tabla creada exitosamente
+  400:
+    description: |
+      Petición inválida debido a la falta de campos obligatorios.
+      La respuesta detallará el campo faltante.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Faltan campos obligatorios 'name'
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  500:
+    description: Error interno del servidor al intentar crear el tablero.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error al crear una tabla

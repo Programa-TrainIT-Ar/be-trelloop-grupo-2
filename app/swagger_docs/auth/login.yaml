@@ -1,0 +1,82 @@
+tags:
+  - Authentication
+summary: Inicia sesión de un usuario.
+operationId: loginUser
+description: |
+  Este endpoint permite a un usuario autenticarse en el sistema
+  proporcionando su correo electrónico y contraseña. Si las credenciales
+  son válidas, se devuelve un token de acceso JWT y la información básica del usuario.
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del usuario registrado.
+          example: usuario@example.com
+        password:
+          type: string
+          format: password
+          description: Contraseña del usuario.
+          example: MiContraseñaSegura1!
+responses:
+  200:
+    description: Inicio de sesión exitoso. Se devuelve un token JWT y los datos básicos del usuario.
+    schema:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Token de acceso JWT para autenticar futuras solicitudes.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY3ODgyNzYwMSwianRpIjoiYWJjMTIzIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEyMyIsIm5iZiI6MTY3ODgyNzYwMSwiZXhwIjoxNjc4ODI4NTAxfQ.some_random_string_here
+        user:
+          type: object
+          description: Información básica del usuario.
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: Juan
+            last_name:
+              type: string
+              example: Pérez
+            email:
+              type: string
+              example: juan.perez@example.com
+  400:
+    description: Petición inválida, faltan campos requeridos.
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Falta el correo o la contraseña
+  401:
+    description: Credenciales inválidas.
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Usuario o contraseña invalida
+  404:
+    description: El usuario no fue encontrado.
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Usuario no encontrado

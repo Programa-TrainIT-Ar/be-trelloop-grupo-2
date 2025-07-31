@@ -1,0 +1,66 @@
+tags:
+  - Users
+summary: Obtiene una lista de todos los usuarios.
+operationId: listUsers
+description: Este endpoint devuelve un array de todos los usuarios registrados en el sistema, incluyendo su información básica y los tableros a los que pertenecen.
+produces:
+  - application/json
+security:
+  - BearerAuth: []
+  - JWT: []
+responses:
+  200:
+    description: Lista de usuarios obtenida exitosamente.
+    schema:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: ID único del usuario.
+            example: 1
+          name:
+            type: string
+            description: Nombre del usuario.
+            example: Juan
+          last_name:
+            type: string
+            description: Apellido del usuario.
+            example: Pérez
+          email:
+            type: string
+            format: email
+            description: Correo electrónico del usuario.
+            example: juan.perez@example.com
+          created_at:
+            type: string
+            format: date-time
+            description: Fecha y hora de creación del usuario en formato ISO 8601.
+            example: "2025-07-30T10:30:00.000Z"
+          boards:
+            type: array
+            description: Lista de tableros a los que el usuario pertenece (solo información básica).
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 101
+                name:
+                  type: string
+                  example: Mi Primer Tablero
+                description:
+                  type: string
+                  example: Un tablero de ejemplo para tareas
+  500:
+    description: Error interno del servidor al intentar obtener los usuarios.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error al obtener usuarios
