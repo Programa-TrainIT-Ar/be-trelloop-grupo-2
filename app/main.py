@@ -33,8 +33,12 @@ app.config['SWAGGER'] = {
             "scheme": "Bearer"
         }
     },
-    # this is here to apply to all secured endpoints by default, or specify per route
-    "security": [{"BearerAuth": []}] 
+    "security": [{"BearerAuth": []}],
+    "info": {
+        "title": "Trelloop API",
+        "description": "Documentación interactiva para la API de gestión de tareas Trelloop.",
+        "version": "1.0.0",
+    },
 }
 
 swagger = Swagger(app)
