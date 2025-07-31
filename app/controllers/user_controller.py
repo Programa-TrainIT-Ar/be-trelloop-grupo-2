@@ -27,7 +27,7 @@ def login_users():
     if password_matching:
         access_token = create_access_token(identity=str(user.id))
         return jsonify({"token": access_token,
-                        "user" : user.to_dict()})
+                        "user" : user.to_dict_basic()})
     return jsonify({"message": "Usuario o contraseña invalida"}), 401
 
 def protected_users():
@@ -57,16 +57,20 @@ def register_user(data):
         password = data["password"]
         confirm_password = data["confirm_password"]
 
-        # Validación de nombres y apellidos
-        if len(name) < 3:
+        # Validación de nombre
+        if not re.fullmatch(r"^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?: [A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})*$", name):
             return jsonify({
                 "success": False,
-                "message": "El nombre debe tener al menos 3 carcateres"}), 400
+                "message": "El nombre debe comenzar con mayúscula, contener solo letras (con o sin tilde), tener al menos 3 letras, y puede incluir espacios (ej: 'María José')"
+            }), 400
 
-        if len(last_name) < 3:
+        # Validación de apellido
+        if not re.fullmatch(r"^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?: [A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})*$", last_name):
             return jsonify({
                 "success": False,
-                "message": "El apellido debe tener al menos 3 caracteres"}), 400
+                "message": "El apellido debe comenzar con mayúscula, contener solo letras (con o sin tilde), tener al menos 3 letras, y puede incluir espacios (ej: 'De la Cruz')"
+            }), 400
+
 
         # Validación de email
         try:

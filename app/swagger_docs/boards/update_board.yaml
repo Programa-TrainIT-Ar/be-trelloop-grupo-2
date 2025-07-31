@@ -1,0 +1,109 @@
+tags:
+  - Boards
+summary: Actualiza un tablero existente.
+operationId: updateBoard
+description: |
+  Este endpoint permite a un usuario autenticado, que es miembro del tablero, actualizar la información de un tablero específico.
+  Todos los campos en el cuerpo de la solicitud son opcionales; solo los campos proporcionados serán actualizados.
+security:
+  - BearerAuth: []
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero a actualizar.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nuevo nombre para el tablero.
+          example: Tablero de Gestión de Proyectos
+        description:
+          type: string
+          description: Nueva descripción para el tablero.
+          example: Tablero centralizado para seguimiento de tareas y proyectos.
+        status:
+          type: string
+          description: Nuevo estado de visibilidad del tablero. Debe ser 'PUBLIC' o 'PRIVATE'.
+          enum:
+            - PUBLIC
+            - PRIVATE
+          example: PUBLIC
+        boardImageUrl:
+          type: string
+          format: url
+          description: Nueva URL de imagen para el tablero.
+          example: https://example.com/new_board_image.jpg
+        tags:
+          type: array
+          description: |
+            Lista de nombres de etiquetas para asociar con el tablero. Las etiquetas existentes se reemplazarán.
+            Las etiquetas que no existan serán creadas.
+          items:
+            type: string
+          example: ["proyectos", "colaboración", "prioridad media"]
+        members:
+          type: array
+          description: |
+            Lista de IDs de usuarios a establecer como miembros del tablero. Los miembros existentes se reemplazarán.
+            El usuario autenticado (owner_id) se añadirá automáticamente si no está incluido en la lista.
+          items:
+            type: integer
+          example: [1, 4, 7] # Asume que el usuario 1 es el owner y se agregará automáticamente si no está aquí.
+responses:
+  200:
+    description: Tablero actualizado exitosamente.
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Tablero con id: 1 actualizado correctamente"
+  400:
+    description: |
+      Solicitud inválida debido a datos malformados o valores incorrectos.
+      Incluye errores si 'status' no es 'PRIVATE' o 'PUBLIC', o si 'tags' o 'members' no son listas.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Los datos no fueron provistos
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero no encontrado o el usuario no es miembro del tablero.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "El tablero con id: 1 no fue encontrado"
+  500:
+    description: Error interno del servidor al intentar actualizar el tablero.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error al actualizar la tabla

@@ -70,6 +70,77 @@ python -m app.main
 
 # 📚 DOCUMENTACIÓN DE ENDPOINTS
 
+Bienvenido a la documentación interactiva de la API de Trelloop. Aquí encontrarás toda la información necesaria para interactuar con nuestros servicios, desde la autenticación de usuarios hasta la gestión de tableros, listas y tarjetas.
+
+## Accediendo a la Documentación
+Nuestra API está documentada utilizando Swagger UI, lo que te permite explorar y probar los endpoints directamente desde tu navegador.
+
+## URL de la Documentación
+Una vez que la aplicación esté corriendo localmente, puedes acceder a la documentación en la siguiente URL:
+
+http://localhost:5000/docs/
+
+## Uso de Swagger UI
+La interfaz de Swagger UI organiza los endpoints por etiquetas (tags), como "Authentication", "Boards", etc. Para usar la API, sigue estos pasos:
+
+### 1. Autenticación (Obtener un Token JWT)
+Para interactuar con la mayoría de los endpoints de la API, necesitarás un token de autenticación JWT.
+
+Paso a Paso:
+
+1. Dirígete a la sección "Authentication" en la documentación.
+
+2. Expande el endpoint POST /api/login.
+
+3. Haz clic en "Try it out".
+
+4. Introduce tus credenciales de usuario (correo y contraseña) en el campo body.
+
+5. Haz clic en "Execute".
+
+6. En la sección de Responses, verás la respuesta de la API que incluirá tu token JWT. Cópialo (será una cadena larga).
+
+### 2. Autorizar Solicitudes
+Una vez que tengas tu token JWT, deberás usarlo para autorizar tus solicitudes a los endpoints protegidos:
+
+#### Paso a Paso:
+
+1. En la parte superior de la página de Swagger UI, haz clic en el botón "Authorize".
+
+2. Aparecerá una ventana de diálogo para la BearerAuth.
+
+3. En el campo de entrada, escribe la palabra Bearer seguida de un espacio y luego pega tu token JWT.
+
+- Ejemplo: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY3ODg5NzY5OSwianRpIjoiZmVkMjAxOWUtODk2Yi00NmY0LWEyZmQtYjY2ZjQwYzE3ZDMxIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6MSwibmJmIjoxNjc4ODk3Njk5LCJleHAiOjE2Nzg4OTg1OTl9.your_jwt_token_here
+
+4. Haz clic en "Authorize" y luego en "Close".
+
+5. Verás que los iconos de candado junto a los endpoints protegidos ahora aparecerán "cerrados" o "autorizados".
+
+### 3. Probar Endpoints Protegidos
+Ahora que estás autorizado, puedes probar los demás endpoints:
+
+- Paso a Paso:
+
+1. Expande cualquier endpoint que tenga el icono de candado "cerrado" (indicando que requiere autenticación), por ejemplo, GET /api/boards/.
+
+2. Haz clic en "Try it out".
+
+3. Si el endpoint requiere parámetros (como board_id en GET /api/boards/{board_id} o un body para POST/PUT), introduce los valores necesarios.
+
+4. Haz clic en "Execute".
+
+5. Revisa la Response body para ver el resultado de tu solicitud.
+
+Estructura de la Documentación
+Authentication: Endpoints relacionados con el registro, inicio de sesión y gestión de sesiones de usuario.
+
+Boards: Endpoints para crear, obtener, actualizar y eliminar tableros.
+
+[Otros Tags]: Si tienes más secciones (e.g., Lists, Cards, Users), serán listadas aquí con sus respectivos endpoints.
+
+Esperamos que esta guía te sea de gran utilidad para explorar y utilizar la API de Trelloop. Si tienes alguna pregunta o encuentras algún problema, no dudes en contactarnos.
+
 Esta sección describe todos los endpoints disponibles en la API del proyecto.
 
 ## 🔐 Autenticación

@@ -39,6 +39,8 @@ class Board(db.Model):
     
     def to_dict_basic(self):
         return {
-            'name': self.name
-    }
+            'name': self.name,
+            "description": self.description,
+            'id': self.id,
+        }
 
