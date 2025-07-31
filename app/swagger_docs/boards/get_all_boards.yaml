@@ -1,0 +1,85 @@
+tags:
+  - Boards
+summary: Obtiene una lista de todos los tableros.
+operationId: getAllBoards
+description: Este endpoint devuelve un array de todos los tableros registrados en el sistema, incluyendo su informacion detallada y sus miembros y etiquetas asociadas.
+produces:
+  - application/json
+security:
+  - BearerAuth: []
+responses:
+  200:
+    description: Lista de tableros obtenida exitosamente.
+    schema:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: ID unico del tablero.
+            example: 1
+          board_image_url:
+            type: string
+            format: url
+            description: URL de la imagen del tablero. Puede ser nulo.
+            example: https://example.com/board_default.jpg
+          name:
+            type: string
+            description: Nombre del tablero.
+            example: Tablero de Marketing
+          description:
+            type: string
+            description: Descripcion del tablero.
+            example: Planificacion de campañas de marketing para el Q4.
+          owner_id:
+            type: integer
+            description: ID del usuario propietario del tablero.
+            example: 1
+          status:
+            type: string
+            description: Estado de visibilidad del tablero.
+            enum:
+              - PUBLIC
+              - PRIVATE
+            example: PUBLIC
+          created_at:
+            type: string
+            format: date-time
+            description: Fecha y hora de creacion del tablero en formato ISO 8601.
+            example: "2025-07-30T10:00:00.000Z"
+          members:
+            type: array
+            description: Lista de usuarios miembros del tablero (informacion basica).
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 2
+                name:
+                  type: string
+                  example: Maria
+                last_name:
+                  type: string
+                  example: Gonz\u00e1lez
+                email:
+                  type: string
+                  example: maria.gonzalez@example.com
+          tags:
+            type: array
+            description: Lista de nombres de etiquetas asociadas al tablero.
+            items:
+              type: string
+            example: ["marketing", "campañas"]
+  500:
+    description: Error interno del servidor al intentar obtener los tableros.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error al obtener las boards

@@ -13,7 +13,6 @@ from flasgger import Swagger
 
 app = Flask(__name__)
 app.config['SWAGGER'] = {
-    "swagger_version": "2.0", 
     "headers": [],
     "specs": [
         {
@@ -27,10 +26,11 @@ app.config['SWAGGER'] = {
     "specs_route": "/docs/", 
     "securityDefinitions": {
         "BearerAuth": { 
-            "type": "apiKey",
+            "type": "apiKey",  
             "name": "Authorization",
             "in": "header",
-            "description": "JWT Authorization header using the Bearer scheme. Example: 'Authorization: Bearer {token}'"
+            "description": "JWT Authorization header using the Bearer scheme. Example: 'Authorization: Bearer {token}'",
+            "scheme": "Bearer"
         }
     },
     # this is here to apply to all secured endpoints by default, or specify per route
