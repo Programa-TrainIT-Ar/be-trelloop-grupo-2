@@ -7,19 +7,20 @@ class List(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
-    board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
     position = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
     
-    # Relationships
-    cards = db.relationship('Card', backref='list', lazy=True, order_by='Card.position')
-    
+    board = db.relationship('Board', back_populates='lists')
+    cards = db.relationship('Card', back_populates='list', cascade='all, delete-orphan',lazy=True, order_by=db.desc('Card.position'))
+
     def to_dict(self):
         """Convert list to dictionary for API responses"""
         return {
             'id': self.id,
             'name': self.name,
-            'board_id': self.board_id,
             'position': self.position,
-            'created_at': self.created_at.isoformat()
-        } 
+            'created_at': self.created_at.isoformat(),
+            'board_id': self.board_id,
+            'cards': [card.to_dict() for card in self.cards]
+        }

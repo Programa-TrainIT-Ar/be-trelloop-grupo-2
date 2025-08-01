@@ -1,0 +1,136 @@
+tags:
+  - Authentication
+summary: Registra un nuevo usuario en la plataforma.
+operationId: registerUser
+description: |
+  Este endpoint permite a un nuevo usuario crear una cuenta en el sistema.
+  Realiza validaciones exhaustivas de los datos de entrada, incluyendo la presencia
+  de todos los campos requeridos, el formato del email, la fortaleza de la contraseña,
+  y la unicidad del email en la base de datos.
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - name
+        - last_name
+        - email
+        - password
+        - confirm_password
+      properties:
+        name:
+          type: string
+          description: Nombre del usuario. Debe tener al menos 3 caracteres.
+          minLength: 3
+          example: Juan
+        last_name:
+          type: string
+          description: Apellido del usuario. Debe tener al menos 3 caracteres.
+          minLength: 3
+          example: Pérez
+        email:
+          type: string
+          format: email
+          description: Correo electrónico único del usuario. Será validado por formato y existencia de dominio.
+          example: juan.perez@example.com
+        password:
+          type: string
+          format: password
+          description: |
+            Contraseña del usuario. Debe cumplir con los siguientes criterios:
+            - Mínimo 8 caracteres.
+            - Al menos una letra mayúscula (A-Z).
+            - Al menos un número (0-9).
+            - Al menos un carácter especial (!@#$%^&*(),.?":{}|<>).
+          minLength: 8
+          example: MiContraseñaSegura1!
+        confirm_password:
+          type: string
+          format: password
+          description: Confirmación de la contraseña. Debe ser idéntica al campo `password`.
+          minLength: 8 
+          example: MiContraseñaSegura1!
+responses:
+  201:
+    description: Usuario registrado exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Usuario registrado exitosamente
+  400:
+    description: |
+      Error en la validación de los datos de entrada o el email ya está registrado.
+      La respuesta detallará el motivo específico del error.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: El campo 'name' es obligatorio
+    examples:
+      application/json:
+        missing_field:
+          value:
+            success: false
+            message: El campo 'name' es obligatorio
+        name_too_short:
+          value:
+            success: false
+            message: El nombre debe tener al menos 3 caracteres
+        last_name_too_short:
+          value:
+            success: false
+            message: El apellido debe tener al menos 3 caracteres
+        invalid_email_format:
+          value:
+            success: false
+            message: Email inválido
+        password_too_short:
+          value:
+            success: false
+            message: La contraseña debe tener al menos 8 caracteres
+        password_no_uppercase:
+          value:
+            success: false
+            message: La contraseña debe contener al menos una letra mayúscula
+        password_no_number:
+          value:
+            success: false
+            message: La contraseña debe contener al menos un número
+        password_no_special_char:
+          value:
+            success: false
+            message: La contraseña debe contener al menos un caracter especial
+        password_mismatch:
+          value:
+            success: false
+            message: Las contraseñas no coinciden
+        email_exists:
+          value:
+            success: false
+            message: Ya existe un usario registrado con este email
+  500:
+    description: Error interno del servidor al intentar registrar al usuario.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error al registrar usuario
