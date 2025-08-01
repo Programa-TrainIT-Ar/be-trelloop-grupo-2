@@ -7,15 +7,12 @@ class Card(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(255), nullable=False)
-    description = db.Column(db.Text)
+    description = db.Column(db.Text, nullable=True) 
     list_id = db.Column(db.Integer, db.ForeignKey('lists.id'), nullable=False)
     position = db.Column(db.Integer, nullable=False)
-    due_date = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationships
-    comments = db.relationship('CardComment', backref='card', lazy=True, order_by='CardComment.created_at')
-    assignees = db.relationship('CardAssignee', backref='card', lazy=True)
+    list = db.relationship('List', back_populates='cards')
     
     def to_dict(self):
         """Convert card to dictionary for API responses"""
@@ -25,13 +22,13 @@ class Card(db.Model):
             'description': self.description,
             'list_id': self.list_id,
             'position': self.position,
-            'due_date': self.due_date.isoformat() if self.due_date else None,
             'created_at': self.created_at.isoformat()
         }
 
+
 class CardComment(db.Model):
     """Card comment model for user comments on cards"""
-    __tablename__ = 'card_comments'
+    tablename = 'card_comments'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), nullable=False)
@@ -51,7 +48,7 @@ class CardComment(db.Model):
 
 class CardAssignee(db.Model):
     """Card assignee model for many-to-many relationship between users and cards"""
-    __tablename__ = 'card_assignees'
+    tablename = 'card_assignees'
     
     card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True) 
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
