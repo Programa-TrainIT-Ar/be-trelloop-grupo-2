@@ -22,6 +22,7 @@ class Board(db.Model):
 
     members = db.relationship('User', secondary='user_board', back_populates="boards")
     tags = db.relationship('Tag', secondary=board_tag, back_populates='boards')
+    lists = db.relationship('List', back_populates='board', cascade='all, delete-orphan', lazy=True, order_by='List.position')
     
     def to_dict(self):
         """Convert board to dictionary for API responses"""
@@ -34,7 +35,8 @@ class Board(db.Model):
             'board_image_url': self.board_image_url,
             'members': [member.to_dict_basic() for member in self.members],
             'tags': [tag.name for tag in self.tags],
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'lists': [list.to_dict() for list in self.lists]
         }
     
     def to_dict_basic(self):
