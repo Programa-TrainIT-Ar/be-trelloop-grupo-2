@@ -13,7 +13,12 @@ config = {
     "DATABASE_URL" : get_env_variable("DATABASE_URL"),
     "JWT_SECRET_KEY" : get_env_variable("JWT_SECRET_KEY"),
     "CORS_ORIGINS" : get_env_variable("CORS_ORIGINS").split(","),
-    "JWT_ACCESS_TOKEN_EXPIRES": int(get_env_variable("JWT_ACCESS_TOKEN_EXPIRES"))
+    "JWT_ACCESS_TOKEN_EXPIRES": int(get_env_variable("JWT_ACCESS_TOKEN_EXPIRES")),
+
+    "CLOUDINARY_CLOUD_NAME": get_env_variable("CLOUDINARY_CLOUD_NAME"),
+    "CLOUDINARY_API_KEY": get_env_variable("CLOUDINARY_API_KEY"),
+    "CLOUDINARY_API_SECRET": get_env_variable("CLOUDINARY_API_SECRET"),
+
 }
 
 
