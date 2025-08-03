@@ -139,7 +139,8 @@ def get_boards_by_user():
                     {
                         "id": m.id,
                         "name": m.name,
-                        "lastName": m.last_name  
+                        "lastName": m.last_name,
+                        "avatarUrl": m.avatar_url 
                     } for m in b.members
                 ],
                 "created_at": b.created_at.isoformat()
@@ -221,12 +222,35 @@ def update_board(board_id):
                 else:
                     searched_board.tags.append(found_tag)
 
+        found_members = []
+
         if new_member_ids:
-            found_members = User.query.filter(User.id.in_(new_member_ids)).all()
-            owner = User.query.get(user_id)
-            if owner and owner not in found_members:
-                found_members.append(owner)
+            for identifier in new_member_ids:
+                user = None
+
+                # Si es un número, buscamos por ID
+                if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
+                    user = User.query.get(int(identifier))
+                
+                # Si es un email
+                elif isinstance(identifier, str) and "@" in identifier:
+                    user = User.query.filter_by(email=identifier.lower()).first()
+                
+                # Si es un nombre o parte del nombre
+                elif isinstance(identifier, str):
+                    user = User.query.filter(User.name.ilike(f"%{identifier.strip()}%")).first()
+
+                if user and user not in found_members:
+                    found_members.append(user)
+
+        # Agregar al owner siempre
+        owner = User.query.get(user_id)
+        if owner and owner not in found_members:
+            found_members.append(owner)
+
+        if found_members:
             searched_board.members = found_members
+
 
         db.session.commit()
         return jsonify({"message": f"Tablero con id: {board_id} actualizado correctamente"}), 200
