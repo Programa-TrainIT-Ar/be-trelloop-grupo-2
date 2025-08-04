@@ -2,6 +2,8 @@ from ..database.database import db
 from datetime import datetime
 import bcrypt
 
+DEFAULT_AVATAR_URL = "https://res.cloudinary.com/demo/image/upload/v1234567890/default-avatar.png"
+
 class User(db.Model):
     """User model for authentication and user management"""
     __tablename__ = 'users'
@@ -30,7 +32,7 @@ class User(db.Model):
             'name': self.name,
             'last_name': self.last_name,
             'email': self.email,
-            'avatar_url': self.avatar_url, 
+            'avatar_url': self.avatar_url or DEFAULT_AVATAR_URL,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'boards': [board.to_dict_basic() for board in self.boards]
         }
@@ -41,5 +43,6 @@ class User(db.Model):
             'name': self.name,
             'last_name': self.last_name,
             'email': self.email,
-            'avatar_url': self.avatar_url  
+            'avatar_url': self.avatar_url or DEFAULT_AVATAR_URL
         }
+

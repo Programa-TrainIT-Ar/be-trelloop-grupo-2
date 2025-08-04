@@ -5,6 +5,7 @@ from ..logs.logger import logger
 import bcrypt
 from flask_jwt_extended import create_access_token
 from email_validator import validate_email, EmailNotValidError
+from sqlalchemy import or_
 import re
 
 #CRUD FOR USERS
@@ -29,6 +30,32 @@ def login_users():
         return jsonify({"token": access_token,
                         "user" : user.to_dict_basic()})
     return jsonify({"message": "Usuario o contraseña invalida"}), 401
+
+def search_users():
+    try:
+        query = request.args.get('q', '').strip()
+
+        if not query:
+            return jsonify({
+                "success": False,
+                "message": "La consulta de búsqueda es requerida"
+            }), 400
+
+        users = User.query.filter(
+            or_(
+                User.name.ilike(f"%{query}%"),
+                User.email.ilike(f"%{query}%")
+            )
+        ).limit(10).all()
+
+        return jsonify([user.to_dict_basic() for user in users]), 200
+
+    except Exception as e:
+        logger.error(f"Error al buscar usuarios: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error interno al buscar usuarios"
+        }), 500
 
 def protected_users():
     return jsonify({"message": "This is a protected route"})
