@@ -1,5 +1,6 @@
 from ..database.database import db
 from datetime import datetime
+from .card import Card
 
 class List(db.Model):
     """List model for organizing cards within boards"""
@@ -12,8 +13,14 @@ class List(db.Model):
     board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
     
     board = db.relationship('Board', back_populates='lists')
-    cards = db.relationship('Card', back_populates='list', cascade='all, delete-orphan',lazy=True, order_by=db.desc('Card.position'))
-
+    cards = db.relationship(
+        'Card',
+        back_populates='list',
+        cascade='all, delete-orphan',
+        lazy=True,
+        order_by=lambda: db.desc(Card.position)
+    )
+    
     def to_dict(self):
         """Convert list to dictionary for API responses"""
         return {
