@@ -43,7 +43,7 @@ class Board(db.Model):
             'members': [member.to_dict_basic() for member in self.members],
             'tags': [tag.name for tag in self.tags],
             'created_at': self.created_at.isoformat(),
-            'lists': [list.to_dict() for list in self.lists]
+            'lists': [l.to_dict() for l in self.lists]
         }
     
     def to_dict_basic(self):
