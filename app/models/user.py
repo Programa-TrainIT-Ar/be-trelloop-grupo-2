@@ -2,7 +2,7 @@ from ..database.database import db
 from datetime import datetime
 import bcrypt
 
-DEFAULT_AVATAR_URL = "https://res.cloudinary.com/demo/image/upload/v1234567890/default-avatar.png"
+DEFAULT_AVATAR_URL = "https://res.cloudinary.com/djw3lkdam/image/upload/v1754147240/samples/cloudinary-icon.png"
 
 class User(db.Model):
     """User model for authentication and user management"""
