@@ -1,12 +1,11 @@
 tags:
   - Lists
-summary: Obtiene todas las listas de un tablero.
+summary: Obtiene todas las listas de un tablero específico.
 operationId: getListsByBoard
 description: |
-  Este endpoint permite a un usuario autenticado obtener todas las listas pertenecientes a un tablero específico.
-  El usuario debe ser miembro del tablero para poder acceder a sus listas.
-
-  Las listas se devuelven ordenadas por su posición (`position`).
+  Este endpoint permite a un usuario autenticado obtener una lista de todas las listas
+  asociadas a un tablero específico, ordenadas por su posición.
+  Solo un miembro del tablero puede acceder a esta información.
 security:
   - BearerAuth: []
 produces:
@@ -14,49 +13,61 @@ produces:
 parameters:
   - name: board_id
     in: path
+    description: El ID único del tablero del que se desean obtener las listas.
     required: true
     type: integer
-    description: ID del tablero del cual se desean obtener las listas.
-    example: 12
+    format: int64
+    example: 1
 responses:
   200:
-    description: Listas obtenidas exitosamente. Puede estar vacío si no hay listas.
+    description: Lista de listas obtenida exitosamente.
     schema:
-      oneOf:
-        - type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-                example: 7
-              name:
-                type: string
-                example: Tareas urgentes
-              position:
-                type: integer
-                example: 0
-              created_at:
-                type: string
-                format: date-time
-                example: "2025-08-04T22:13:21.000Z"
-              board_id:
-                type: integer
-                example: 12
-              cards:
-                type: array
-                items:
-                  type: object
-        - type: object
-          properties:
-            message:
-              type: string
-              example: El tablero no tiene listas creadas
-            lists:
-              type: array
-              items: {}
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: ID único de la lista.
+            example: 10
+          board_id:
+            type: integer
+            description: ID del tablero al que pertenece la lista.
+            example: 1
+          name:
+            type: string
+            description: Nombre de la lista.
+            example: Tareas Pendientes
+          position:
+            type: integer
+            description: Posición de la lista dentro del tablero.
+            example: 1
+          created_at:
+            type: string
+            format: date-time
+            description: Fecha y hora de creación de la lista en formato ISO 8601.
+            example: "2025-07-30T11:00:00.000Z"
+          cards:
+            type: array
+            description: Lista de tarjetas asociadas a esta lista.
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 50
+                name:
+                  type: string
+                  example: Completar documentación de la API
+                position:
+                  type: integer
+                  example: 1
+                due_date:
+                  type: string
+                  format: date-time
+                  example: "2025-08-15T00:00:00.000Z"
   401:
-    description: No autorizado. Se requiere un token JWT válido.
+    description: No autorizado. Un token JWT válido es requerido.
     schema:
       type: object
       properties:
@@ -64,13 +75,13 @@ responses:
           type: string
           example: Missing Authorization Header
   404:
-    description: Tablero no encontrado o el usuario no pertenece al tablero.
+    description: Tablero no encontrado o el usuario no es miembro del tablero.
     schema:
       type: object
       properties:
         error:
           type: string
-          example: "El tablero con id: 12 no fue encontrado"
+          example: "El tablero con id: 1 no fue encontrado"
   500:
     description: Error interno del servidor al intentar obtener las listas.
     schema:
