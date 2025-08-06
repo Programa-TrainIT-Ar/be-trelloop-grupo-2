@@ -44,12 +44,12 @@ def create_list(board_id):
         data = request.get_json()
 
         name = data.get("name")
-        side = data.get("side", "right")
-        side = side.lower() if isinstance(side, str) else ""
+        side = data.get("side", "right").lower()
 
         if not name or side not in ("left", "right"):
-            return jsonify({"error": "Campos requeridos: name y side (left o right)"}), 400
+            return jsonify({"error": "Campos requeridos: 'name' y 'side' (left o right)"}), 400
         
+        # Verificar acceso al board
         board = (
             db.session.query(Board)
             .join(UserBoard, UserBoard.board_id == Board.id)
@@ -60,12 +60,14 @@ def create_list(board_id):
         if not board:
             return jsonify({"error": f"El tablero con id {board_id} no fue encontrado o no tienes acceso"}), 404
 
+        # Obtener última lista para calcular la posición
         last_list = (
             db.session.query(List)
             .filter_by(board_id=board_id)
             .order_by(List.position.desc())
             .first()
         )
+
         if not last_list:
             new_position = 0
         elif side == "right":
@@ -73,12 +75,12 @@ def create_list(board_id):
         elif side == "left":
             new_position = last_list.position
 
-
+        # Mover las demás listas si se inserta a la izquierda
         db.session.query(List).filter(
-                List.board_id == board_id,
-                List.position >= new_position
-            ).update({List.position: List.position + 1})
-       
+            List.board_id == board_id,
+            List.position >= new_position
+        ).update({List.position: List.position + 1})
+
         new_list = List(name=name, position=new_position, board_id=board_id)
         db.session.add(new_list)
         db.session.commit()
