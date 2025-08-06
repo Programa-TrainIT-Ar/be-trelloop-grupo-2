@@ -30,6 +30,8 @@ class Board(db.Model):
     lazy=True,
     order_by=lambda: List.position
     )
+    userboard_relationships = db.relationship("UserBoard", backref="board", lazy=True)
+
 
     def to_dict(self):
         """Convert board to dictionary for API responses"""

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
 from flasgger.utils import swag_from
-from ..controllers.board_controller import create_board, get_all_boards, get_board_by_id, get_boards_by_user, update_board, delete_board
+from ..controllers.board_controller import create_board, get_all_boards, get_board_by_id, get_boards_by_user, update_board, delete_board, toggle_favorite
 
 board_bp = Blueprint('board', __name__, url_prefix='/api/boards')
 
@@ -41,3 +41,8 @@ def handle_update_board(board_id):
 @swag_from('../swagger_docs/boards/delete_board.yaml')
 def handle_delete_board(board_id):
     return delete_board(board_id)
+
+@board_bp.route('/<int:board_id>/favorite', methods=['PATCH'])
+@jwt_required()
+def handle_toggle_favorite(board_id):
+    return toggle_favorite(board_id)
