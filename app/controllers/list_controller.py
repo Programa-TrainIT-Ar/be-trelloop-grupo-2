@@ -1,4 +1,5 @@
 from app.models.board import Board
+from app.models.card import Card
 from app.models.list import List
 from app.models.relationships import UserBoard
 from app.database.database import db
@@ -43,12 +44,12 @@ def create_list(board_id):
         data = request.get_json()
 
         name = data.get("name")
-        side = data.get("side", "right")
-        side = side.lower() if isinstance(side, str) else ""
+        side = data.get("side", "right").lower()
 
         if not name or side not in ("left", "right"):
-            return jsonify({"error": "Campos requeridos: name y side (left o right)"}), 400
+            return jsonify({"error": "Campos requeridos: 'name' y 'side' (left o right)"}), 400
         
+        # Verificar acceso al board
         board = (
             db.session.query(Board)
             .join(UserBoard, UserBoard.board_id == Board.id)
@@ -59,12 +60,14 @@ def create_list(board_id):
         if not board:
             return jsonify({"error": f"El tablero con id {board_id} no fue encontrado o no tienes acceso"}), 404
 
+        # Obtener última lista para calcular la posición
         last_list = (
             db.session.query(List)
             .filter_by(board_id=board_id)
             .order_by(List.position.desc())
             .first()
         )
+
         if not last_list:
             new_position = 0
         elif side == "right":
@@ -72,12 +75,12 @@ def create_list(board_id):
         elif side == "left":
             new_position = last_list.position
 
-
+        # Mover las demás listas si se inserta a la izquierda
         db.session.query(List).filter(
-                List.board_id == board_id,
-                List.position >= new_position
-            ).update({List.position: List.position + 1})
-       
+            List.board_id == board_id,
+            List.position >= new_position
+        ).update({List.position: List.position + 1})
+
         new_list = List(name=name, position=new_position, board_id=board_id)
         db.session.add(new_list)
         db.session.commit()
@@ -88,3 +91,34 @@ def create_list(board_id):
         logger.error(f"Error al crear la lista en el tablero {board_id}: {str(e)}")
         db.session.rollback()
         return jsonify({"error": "Error interno del servidor"}), 500
+
+def delete_list(board_id, list_id):
+    user_id = int(get_jwt_identity())
+    searched_board = (
+            db.session.query(Board)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id,
+                    Board.id == board_id)
+            .first()
+        )
+    if searched_board is None:
+        return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
+    
+    if searched_board.owner_id != user_id:
+     return jsonify({"error": "No tienes permiso para eliminar este tablero"}), 403
+    
+    searched_list = next((l for l in searched_board.lists if l.id == list_id), None)
+    
+    if searched_list is None:
+        return jsonify({"error": f"La lista con id: {list_id} no fue encontrada en el tablero"}), 404
+    
+    if db.session.query(Card).join(List).filter(
+    List.id == list_id,
+    List.board_id == board_id
+    ).count() > 0:
+        return jsonify({"error": "La lista no está vacía. Elimina primero las tarjetas."}), 400
+    
+    db.session.delete(searched_list)
+    db.session.commit()
+
+    return '', 204

@@ -142,6 +142,13 @@ def get_boards_by_user():
                         "lastName": m.last_name  
                     } for m in b.members
                 ],
+                "lists": [
+                    {
+                        "id": l.id,
+                        "title": l.name,
+                        "position": l.position
+                    } for l in b.lists
+                ],
                 "created_at": b.created_at.isoformat()
             } for b in boards
         ]
