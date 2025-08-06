@@ -5,12 +5,14 @@ class UserBoard (db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
+    is_favorite = db.Column(db.Boolean, default=False) #Nuevo campo para el manejo de favoritos
     
     def to_dict(self):
         return {
             'id': self.id,
             'user_id': self.user_id,
-            'board_id': self.board_id
+            'board_id': self.board_id,
+            'is_favorite': self.is_favorite
         }
 
 
