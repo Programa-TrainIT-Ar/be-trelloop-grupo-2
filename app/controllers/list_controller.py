@@ -1,4 +1,5 @@
 from app.models.board import Board
+from app.models.card import Card
 from app.models.list import List
 from app.models.relationships import UserBoard
 from app.database.database import db
@@ -90,3 +91,34 @@ def create_list(board_id):
         logger.error(f"Error al crear la lista en el tablero {board_id}: {str(e)}")
         db.session.rollback()
         return jsonify({"error": "Error interno del servidor"}), 500
+
+def delete_list(board_id, list_id):
+    user_id = int(get_jwt_identity())
+    searched_board = (
+            db.session.query(Board)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id,
+                    Board.id == board_id)
+            .first()
+        )
+    if searched_board is None:
+        return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
+    
+    if searched_board.owner_id != user_id:
+     return jsonify({"error": "No tienes permiso para eliminar este tablero"}), 403
+    
+    searched_list = next((l for l in searched_board.lists if l.id == list_id), None)
+    
+    if searched_list is None:
+        return jsonify({"error": f"La lista con id: {list_id} no fue encontrada en el tablero"}), 404
+    
+    if db.session.query(Card).join(List).filter(
+    List.id == list_id,
+    List.board_id == board_id
+    ).count() > 0:
+        return jsonify({"error": "La lista no está vacía. Elimina primero las tarjetas."}), 400
+    
+    db.session.delete(searched_list)
+    db.session.commit()
+
+    return '', 204
