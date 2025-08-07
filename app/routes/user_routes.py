@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
-from ..controllers.user_controller import get_users, login_users, protected_users
+from ..controllers.user_controller import get_users, login_users, protected_users, search_users
+
 from flasgger.utils import swag_from
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/users')
@@ -20,4 +21,9 @@ def handle_login_users():
 @jwt_required()
 def handle_protected_users():
     return protected_users()
+
+@user_bp.route('/search', methods=['GET'])
+@jwt_required()
+def handle_search_users():
+    return search_users()
 
