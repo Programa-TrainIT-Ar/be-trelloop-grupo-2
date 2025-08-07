@@ -7,7 +7,8 @@ from flask import jsonify ,request
 from flask_jwt_extended import get_jwt_identity
 from ..logs.logger import logger
 from ..utils.cloudinary_uploader import upload_image_to_cloudinary
-
+from flask import abort
+from flask_jwt_extended import jwt_required
 
 #CRUD FOR BOARD
 
@@ -116,12 +117,14 @@ def get_boards_by_user():
     try:
         user_id = int(get_jwt_identity())
         logger.info(f"🔑 Usuario autenticado con ID: {user_id}")
+
         boards = (
-            db.session.query(Board)
-            .join(UserBoard, UserBoard.board_id == Board.id)
-            .filter(UserBoard.user_id == user_id)
-            .all()
-        )
+        db.session.query(Board)
+        .join(UserBoard, UserBoard.board_id == Board.id)
+        .filter(UserBoard.user_id == user_id)
+        .order_by(Board.created_at.asc())  # Mantiene orden estable por fecha de creación
+        .all()
+)
 
         if not boards:
             return jsonify({
@@ -142,6 +145,17 @@ def get_boards_by_user():
                         "lastName": m.last_name,
                         "avatarUrl": m.avatar_url 
                     } for m in b.members
+                ],
+                "is_favorite": any(
+                ub.user_id == user_id and ub.is_favorite
+                for ub in b.userboard_relationships if ub.board_id == b.id
+                ),
+                "lists": [
+                    {
+                        "id": l.id,
+                        "title": l.name,
+                        "position": l.position
+                    } for l in b.lists
                 ],
                 "created_at": b.created_at.isoformat()
             } for b in boards
@@ -266,19 +280,55 @@ def update_board(board_id):
 def delete_board(board_id):
     user_id = int(get_jwt_identity())
     searched_board = (
-            db.session.query(Board)
-            .join(UserBoard, UserBoard.board_id == Board.id)
-            .filter(UserBoard.user_id == user_id,
-                    Board.id == board_id)
-            .first()
-        )
+        db.session.query(Board)
+        .join(UserBoard, UserBoard.board_id == Board.id)
+        .filter(UserBoard.user_id == user_id, Board.id == board_id)
+        .first()
+    )
+
     if searched_board is None:
         return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
-    
-    if searched_board.owner_id != user_id:
-     return jsonify({"error": "No tienes permiso para eliminar este tablero"}), 403
 
-    board_data = searched_board.to_dict()
-    db.session.delete(searched_board)
-    db.session.commit()
-    return jsonify(board_data), 202
+    if searched_board.owner_id != user_id:
+        return jsonify({"error": "No tienes permiso para eliminar este tablero"}), 403
+
+    try:
+        # 1. Elimina relaciones UserBoard explícitamente
+        UserBoard.query.filter_by(board_id=board_id).delete()
+
+        # 2. Elimina el tablero
+        db.session.delete(searched_board)
+        db.session.commit()
+
+        return jsonify(searched_board.to_dict()), 202
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al eliminar el tablero: {str(e)}")
+        return jsonify({"error": "Error interno al eliminar el tablero"}), 500
+
+
+
+@jwt_required()
+def toggle_favorite(board_id):
+    try:
+        user_id = int(get_jwt_identity())
+
+        user_board = UserBoard.query.filter_by(user_id=user_id, board_id=board_id).first()
+        if not user_board:
+            return jsonify({"error": "No estás en este tablero"}), 403
+
+        user_board.is_favorite = not user_board.is_favorite
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "is_favorite": user_board.is_favorite
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error al actualizar favorito: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error al actualizar favorito"
+        }), 500
