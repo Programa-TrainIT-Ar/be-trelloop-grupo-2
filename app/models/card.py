@@ -11,9 +11,28 @@ class Card(db.Model):
     list_id = db.Column(db.Integer, db.ForeignKey('lists.id'), nullable=False)
     position = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    due_date = db.Column(db.DateTime, nullable=True)
+    priority = db.Column(db.String(20), nullable=True) 
+    status = db.Column(db.String(20), default='pending')
+    reminder_date = db.Column(db.DateTime, nullable=True)
+    reminder_message = db.Column(db.String(255), nullable=True)
+
     list = db.relationship('List', back_populates='cards')
     
+    # Many-to-many relationship with users
+    assignees = db.relationship(
+        'User',
+        secondary='card_assignees',
+        backref='assigned_cards'
+    )
+
+    # Many-to-many relationship with tags
+    tags = db.relationship(
+        'Tag',
+        secondary='card_tag',
+        backref='cards'
+    )
+
     def to_dict(self):
         """Convert card to dictionary for API responses"""
         return {
@@ -22,7 +41,25 @@ class Card(db.Model):
             'description': self.description,
             'list_id': self.list_id,
             'position': self.position,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'priority': self.priority,
+            'status': self.status,
+            'reminder_date': self.reminder_date.isoformat() if self.reminder_date else None,
+            'reminder_message': self.reminder_message,
+            'assignees': [
+                {
+                    'id': user.id,
+                    'name': user.name,
+                    'email': user.email
+                } for user in self.assignees
+            ] if self.assignees else [],
+            'tags': [
+                {
+                    'id': tag.id,
+                    'name': tag.name
+                } for tag in self.tags
+            ] if self.tags else []
         }
 
 
@@ -48,7 +85,24 @@ class CardComment(db.Model):
 
 class CardAssignee(db.Model):
     """Card assignee model for many-to-many relationship between users and cards"""
-    tablename = 'card_assignees'
+    __tablename__ = 'card_assignees'
     
     card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+
+class Tag(db.Model):
+    """Modelo para etiquetas"""
+    __tablename__ = 'tags'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(50), nullable=False)
+    board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'board_id': self.board_id,
+            'created_at': self.created_at.isoformat()
+        }    
