@@ -94,33 +94,34 @@ def create_list(board_id):
 
 def delete_list(board_id, list_id):
     user_id = int(get_jwt_identity())
+
     searched_board = (
-            db.session.query(Board)
-            .join(UserBoard, UserBoard.board_id == Board.id)
-            .filter(UserBoard.user_id == user_id,
-                    Board.id == board_id)
-            .first()
-        )
+        db.session.query(Board)
+        .join(UserBoard, UserBoard.board_id == Board.id)
+        .filter(UserBoard.user_id == user_id, Board.id == board_id)
+        .first()
+    )
     if searched_board is None:
         return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
-    
-    if searched_board.owner_id != user_id:
-     return jsonify({"error": "No tienes permiso para eliminar este tablero"}), 403
-    
+
+    is_owner = searched_board.owner_id == user_id
+
     searched_list = next((l for l in searched_board.lists if l.id == list_id), None)
-    
     if searched_list is None:
         return jsonify({"error": f"La lista con id: {list_id} no fue encontrada en el tablero"}), 404
-    
-    if db.session.query(Card).join(List).filter(
-    List.id == list_id,
-    List.board_id == board_id
-    ).count() > 0:
-        return jsonify({"error": "La lista no está vacía. Elimina primero las tarjetas."}), 400
-    
+
+    has_cards = (
+        db.session.query(Card).join(List)
+        .filter(List.id == list_id, List.board_id == board_id)
+        .count() > 0
+    )
+
+    # Regla: si NO es dueño y tiene tarjetas -> bloquear
+    if has_cards and not is_owner:
+        return jsonify({"error": "La lista no está vacía y no eres el creador del tablero."}), 400
+
     db.session.delete(searched_list)
     db.session.commit()
-
     return '', 204
 
 def update_list(board_id, list_id):
