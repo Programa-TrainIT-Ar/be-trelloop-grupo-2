@@ -4,7 +4,7 @@ from .relationships import board_tag
 class Tag(db.Model):
     """Tag model for labeling boards"""
     __tablename__ = 'tags'
-    __table_args__ = {'extend_existing': True}
+    
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(50), nullable=False, unique=True)

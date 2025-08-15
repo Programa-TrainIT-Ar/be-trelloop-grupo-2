@@ -1,5 +1,6 @@
 from app.models.board import Board
-from app.models.card import Card, CardAssignee, Tag
+from app.models.card import Card, CardAssignee
+from app.models.tag import Tag
 from app.models.list import List
 from app.models.relationships import UserBoard
 from app.models.user import User
