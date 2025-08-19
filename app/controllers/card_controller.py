@@ -31,13 +31,13 @@ def create_card(board_id, list_id):
         
         assignee_ids = data.get("assignees", [])
     
-        priority = data.get("priority")
+        priority = data.get("priority", "low")
         valid_priorities = ["low", "medium", "high"]
         if priority and priority not in valid_priorities:
             return jsonify({"error": f"Prioridad debe ser: {', '.join(valid_priorities)}"}), 400
         
         status = data.get("status", "pending")
-        tag_ids = data.get("tags", [])
+        tag_names = data.get("tags", [])
         
         due_date = None
         due_date_str = data.get("due_date")
@@ -130,39 +130,56 @@ def create_card(board_id, list_id):
                 .all()
             )
             
-            if len(valid_assignees) != len(assignee_ids):
-                return jsonify({"error": "Algunos responsables no tienen acceso al tablero"}), 400
+            invalid_assignees = set(assignee_ids) - {user.id for user in valid_assignees}
+            if invalid_assignees:
+                return jsonify({
+                    "error": f"Usuarios {list(invalid_assignees)} no tienen acceso al tablero"
+                }), 400
             
-            # Crear las asignaciones
-            for user in valid_assignees:
-                card_assignee = CardAssignee(card_id=new_card.id, user_id=user.id)
-                db.session.add(card_assignee)
+            # Crear las asignaciones usando la relación many-to-many
+            new_card.assignees = valid_assignees
         
         # Asignar etiquetas
-        if tag_ids:
-            # Validar que las etiquetas pertenecen al tablero
-            valid_tags = (
-                db.session.query(Tag)
-                .filter(Tag.id.in_(tag_ids), Tag.board_id == board_id)
-                .all()
-            )
+        if tag_names:
+            tag_objects = []
+    
+            for tag_name in tag_names:
+                 # Buscar tag en el board específico
+                 existing_tag = Tag.query.filter_by(name=tag_name, board_id=board_id).first()
+        
+            if existing_tag:
+                tag_objects.append(existing_tag)
+            else:
+                # Crear nuevo tag en el board
+                new_tag = Tag(name=tag_name, board_id=board_id)
+                db.session.add(new_tag)
+                tag_objects.append(new_tag)
+    
+        new_card.tags = tag_objects
+        # if tag_ids:
+        #     valid_tags = (
+        #         db.session.query(Tag)
+        #         .filter(Tag.id.in_(tag_ids), Tag.board_id == board_id)
+        #         .all()
+        #     )
             
-            if len(valid_tags) != len(tag_ids):
-                return jsonify({"error": "Algunas etiquetas no pertenecen al tablero"}), 400
+        #     invalid_tags = set(tag_ids) - {tag.id for tag in valid_tags}
+        #     if invalid_tags:
+        #         return jsonify({
+        #             "error": f"Etiquetas {list(invalid_tags)} no pertenecen al tablero"
+        #         }), 400
             
-            # Asignar las etiquetas
-            new_card.tags = valid_tags
+        #     new_card.tags = valid_tags
         
         db.session.commit()
-        
-        created_card = db.session.query(Card).filter_by(id=new_card.id).first()
+        db.session.refresh(new_card)
         
         logger.info(f"Tarjeta '{title}' creada en lista {list_id} por usuario {user_id}")
         
         return jsonify({
             "success": True,
             "message": "Tarjeta creada exitosamente",
-            "card": created_card.to_dict()
+            "card": new_card.to_dict()
         }), 201
         
     except Exception as e:
@@ -208,6 +225,7 @@ def get_cards_by_list(board_id, list_id):
         
         return jsonify({
             "success": True,
+            "list_name": target_list.name,
             "cards": [card.to_dict() for card in cards]
         }), 200
         
@@ -263,7 +281,6 @@ def update_card(board_id, list_id, card_id):
         if "status" in data:
             card.status = data["status"]
         
-        # Actualizar fecha de vencimiento
         if "due_date" in data:
             if data["due_date"]:
                 try:
@@ -273,7 +290,6 @@ def update_card(board_id, list_id, card_id):
             else:
                 card.due_date = None
         
-        # Actualizar recordatorio
         if "reminder_date" in data:
             if data["reminder_date"]:
                 try:
@@ -285,6 +301,31 @@ def update_card(board_id, list_id, card_id):
         
         if "reminder_message" in data:
             card.reminder_message = data["reminder_message"]
+
+        if "assignees" in data:
+            assignee_ids = data["assignees"]
+            if assignee_ids:
+                valid_assignees = (
+                    db.session.query(User)
+                    .join(UserBoard, UserBoard.user_id == User.id)
+                    .filter(User.id.in_(assignee_ids), UserBoard.board_id == board_id)
+                    .all()
+                )
+                card.assignees = valid_assignees
+            else:
+                card.assignees = []
+        
+        if "tags" in data:
+            tag_ids = data["tags"]
+            if tag_ids:
+                valid_tags = (
+                    db.session.query(Tag)
+                    .filter(Tag.id.in_(tag_ids), Tag.board_id == board_id)
+                    .all()
+                )
+                card.tags = valid_tags
+            else:
+                card.tags = []
         
         db.session.commit()
         
@@ -328,8 +369,21 @@ def delete_card(board_id, list_id, card_id):
         if not card:
             return jsonify({"error": "Tarjeta no encontrada en la lista especificada"}), 404
         
+        position = card.position
+
         # Eliminar la tarjeta
         db.session.delete(card)
+
+        # Reordenar posiciones de tarjetas restantes
+        remaining_cards = (
+            db.session.query(Card)
+            .filter(Card.list_id == list_id, Card.position > position)
+            .all()
+        )
+        
+        for remaining_card in remaining_cards:
+            remaining_card.position -= 1
+
         db.session.commit()
         
         logger.info(f"Tarjeta {card_id} eliminada por usuario {user_id}")

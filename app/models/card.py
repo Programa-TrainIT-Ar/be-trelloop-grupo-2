@@ -1,5 +1,6 @@
 from ..database.database import db
 from datetime import datetime
+from .relationships import card_tag
 
 class Card(db.Model):
     """Card model for individual tasks within lists"""
@@ -29,7 +30,7 @@ class Card(db.Model):
     # Many-to-many relationship with tags
     tags = db.relationship(
         'Tag',
-        secondary='card_tag',
+        secondary=card_tag,
         backref='cards'
     )
 
@@ -96,20 +97,3 @@ class CardAssignee(db.Model):
     
     card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-
-# class Tag(db.Model):
-#     """Modelo para etiquetas"""
-#     __tablename__ = 'tags'
-    
-#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     name = db.Column(db.String(50), nullable=False)
-#     board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-#     def to_dict(self):
-#         return {
-#             'id': self.id,
-#             'name': self.name,
-#             'board_id': self.board_id,
-#             'created_at': self.created_at.isoformat()
-#         }    
