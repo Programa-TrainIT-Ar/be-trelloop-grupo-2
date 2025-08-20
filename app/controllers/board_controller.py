@@ -9,6 +9,7 @@ from ..logs.logger import logger
 from ..utils.cloudinary_uploader import upload_image_to_cloudinary
 from flask import abort
 from flask_jwt_extended import jwt_required
+from datetime import datetime
 
 #CRUD FOR BOARD
 
@@ -105,6 +106,18 @@ def get_board_by_id(board_id):
                 "success": False,
                 "message": "Board no encontrada"
             }), 404
+
+        # 🔹 Marcar "último uso" si el usuario es miembro y la columna existe
+        try:
+            user_id = int(get_jwt_identity())
+            ub = UserBoard.query.filter_by(user_id=user_id, board_id=board_id).first()
+            if ub is not None and hasattr(ub, "last_accessed_at"):
+                ub.last_accessed_at = datetime.utcnow()
+                db.session.commit()
+        except Exception as _:
+            # No romper si no existe la columna o falla algo menor
+            db.session.rollback()
+
         return jsonify(board.to_dict()), 200
     except Exception as e:
         logger.error(f"Error al obtener board: {str(e)}")
@@ -118,13 +131,29 @@ def get_boards_by_user():
         user_id = int(get_jwt_identity())
         logger.info(f"🔑 Usuario autenticado con ID: {user_id}")
 
-        boards = (
-        db.session.query(Board)
-        .join(UserBoard, UserBoard.board_id == Board.id)
-        .filter(UserBoard.user_id == user_id)
-        .order_by(Board.created_at.asc())  # Mantiene orden estable por fecha de creación
-        .all()
-)
+        # sort=last_use (default) | created_at
+        sort = (request.args.get("sort") or "last_use").strip().lower()
+
+        query = (
+            db.session.query(Board)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id)
+        )
+
+        # Si existe la columna last_accessed_at en UserBoard, ordena por uso reciente.
+        last_access_col = getattr(UserBoard, "last_accessed_at", None)
+
+        if sort == "last_use" and last_access_col is not None:
+            # Uso reciente DESC, empates por nombre ASC
+            query = query.order_by(last_access_col.desc().nullslast(), Board.name.asc())
+        elif sort == "created_at":
+            # Fecha de creación DESC, empates por nombre ASC
+            query = query.order_by(Board.created_at.desc(), Board.name.asc())
+        else:
+            # Fallback seguro si no existe last_accessed_at: creación DESC, nombre ASC
+            query = query.order_by(Board.created_at.desc(), Board.name.asc())
+
+        boards = query.all()
 
         if not boards:
             return jsonify({
@@ -143,12 +172,12 @@ def get_boards_by_user():
                         "id": m.id,
                         "name": m.name,
                         "lastName": m.last_name,
-                        "avatarUrl": m.avatar_url 
+                        "avatarUrl": m.avatar_url
                     } for m in b.members
                 ],
                 "is_favorite": any(
-                ub.user_id == user_id and ub.is_favorite
-                for ub in b.userboard_relationships if ub.board_id == b.id
+                    ub.user_id == user_id and ub.is_favorite
+                    for ub in b.userboard_relationships if ub.board_id == b.id
                 ),
                 "lists": [
                     {
