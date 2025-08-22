@@ -29,7 +29,7 @@ class Card(db.Model):
 
     # Many-to-many relationship with tags
     tags = db.relationship(
-        'Tag',
+        'CardTag',
         secondary=card_tag,
         backref='cards'
     )

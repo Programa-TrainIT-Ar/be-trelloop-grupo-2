@@ -2,7 +2,9 @@ from ..database.database import db
 from datetime import datetime
 import enum
 from sqlalchemy import Enum as SQLEnum
+from .relationships import board_tag
 from .list import List
+
 class BoardStatusEnum(enum.Enum):
     PUBLIC = "public"
     PRIVATE = "private"
@@ -21,7 +23,7 @@ class Board(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     members = db.relationship('User', secondary='user_board', back_populates="boards")
-    tags = db.relationship('Tag', backref='board')
+    tags = db.relationship('Tag', secondary=board_tag, back_populates='boards')
     lists = db.relationship(
     'List',
     back_populates='board',
@@ -29,6 +31,7 @@ class Board(db.Model):
     lazy=True,
     order_by=lambda: List.position
     )
+
     userboard_relationships = db.relationship("UserBoard", backref="board", lazy=True)
 
 

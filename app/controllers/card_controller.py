@@ -1,6 +1,6 @@
 from app.models.board import Board
-from app.models.card import Card, CardAssignee
-from app.models.tag import Tag
+from app.models.card import Card
+from app.models.card_tag import CardTag
 from app.models.list import List
 from app.models.relationships import UserBoard
 from app.models.user import User
@@ -145,13 +145,13 @@ def create_card(board_id, list_id):
     
             for tag_name in tag_names:
                  # Buscar tag en el board específico
-                 existing_tag = Tag.query.filter_by(name=tag_name, board_id=board_id).first()
+                 existing_tag = CardTag.query.filter_by(name=tag_name, board_id=board_id).first()
         
             if existing_tag:
                 tag_objects.append(existing_tag)
             else:
                 # Crear nuevo tag en el board
-                new_tag = Tag(name=tag_name, board_id=board_id)
+                new_tag = CardTag(name=tag_name, board_id=board_id)
                 db.session.add(new_tag)
                 tag_objects.append(new_tag)
     
@@ -319,8 +319,8 @@ def update_card(board_id, list_id, card_id):
             tag_ids = data["tags"]
             if tag_ids:
                 valid_tags = (
-                    db.session.query(Tag)
-                    .filter(Tag.id.in_(tag_ids), Tag.board_id == board_id)
+                    db.session.query(CardTag)
+                    .filter(CardTag.id.in_(tag_ids), CardTag.board_id == board_id)
                     .all()
                 )
                 card.tags = valid_tags
