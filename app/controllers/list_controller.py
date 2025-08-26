@@ -124,8 +124,8 @@ def update_list(board_id, list_id):
             return jsonify({"error": "El campo 'name' es requerido y no puede estar vacío"}), 400
         
         # Validar longitud del nombre
-        if len(name.strip()) > 25:
-            return jsonify({"error": "El nombre de la lista no puede exceder 25 caracteres"}), 400
+        if len(name.strip()) > 50:
+            return jsonify({"error": "El nombre de la lista no puede exceder 50 caracteres"}), 400
 
         # Verificar que el usuario tenga acceso al tablero
         searched_board = (

@@ -4,6 +4,7 @@ import enum
 from sqlalchemy import Enum as SQLEnum
 from .relationships import board_tag
 from .list import List
+
 class BoardStatusEnum(enum.Enum):
     PUBLIC = "public"
     PRIVATE = "private"
@@ -30,6 +31,7 @@ class Board(db.Model):
     lazy=True,
     order_by=lambda: List.position
     )
+
     userboard_relationships = db.relationship("UserBoard", backref="board", lazy=True)
 
 
