@@ -23,8 +23,8 @@ board_tag = db.Table(
   
 )
 
-card_tag = db.Table(
-    'card_tag',
+card_tags_assoc = db.Table(
+    'card_tags_assoc',
     db.Column('card_id', db.Integer, db.ForeignKey('cards.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('card_tags.id'), primary_key=True)
 )

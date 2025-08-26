@@ -9,6 +9,7 @@ from flask import jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from datetime import datetime
 from ..logs.logger import logger
+from datetime import datetime, date
 
 def create_card(board_id, list_id):
     """
@@ -28,9 +29,6 @@ def create_card(board_id, list_id):
             return jsonify({"error": "El título no puede exceder 255 caracteres"}), 400
         
         description = data.get("description", "").strip()
-        
-        assignee_ids = data.get("assignees", [])
-    
         priority = data.get("priority", "low")
         valid_priorities = ["low", "medium", "high"]
         if priority and priority not in valid_priorities:
@@ -38,40 +36,35 @@ def create_card(board_id, list_id):
         
         status = data.get("status", "pending")
         tag_names = data.get("tags", [])
+        assignee_ids = data.get("assignee_ids", [])
         
+        # Validación de fechas
+        today = datetime.utcnow().date()
+
+        # Due date
         due_date = None
         due_date_str = data.get("due_date")
         if due_date_str:
             try:
-                # Formato: "2025-08-20" o "2025-08-20T18:00:00"
-                for date_format in ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]:
-                    try:
-                        due_date = datetime.strptime(due_date_str, date_format)
-                        break
-                    except ValueError:
-                        continue
-                
-                if due_date is None:
-                    return jsonify({"error": "Formato de fecha inválido. Use YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS"}), 400
-            except Exception:
-                return jsonify({"error": "Error al procesar la fecha de vencimiento"}), 400
+                due_date = datetime.strptime(due_date_str, "%Y-%m-%d")
+                if due_date.date() < today:
+                    return jsonify({"error": "La fecha de vencimiento no puede ser anterior a hoy"}), 400
+            except ValueError:
+                return jsonify({"error": "Formato de fecha inválido. Use YYYY-MM-DD"}), 400
         
+        # Reminder date
         reminder_date = None
         reminder_message = data.get("reminder_message", "")
         reminder_date_str = data.get("reminder_date")
         if reminder_date_str:
             try:
-                for date_format in ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]:
-                    try:
-                        reminder_date = datetime.strptime(reminder_date_str, date_format)
-                        break
-                    except ValueError:
-                        continue
-                
-                if reminder_date is None:
-                    return jsonify({"error": "Formato de fecha de recordatorio inválido"}), 400
-            except Exception:
-                return jsonify({"error": "Error al procesar la fecha del recordatorio"}), 400
+                reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d")
+                if reminder_date.date() < today:
+                    return jsonify({"error": "La fecha de recordatorio no puede ser anterior a hoy"}), 400
+                if due_date and reminder_date < due_date:
+                    return jsonify({"error": "La fecha de recordatorio debe ser posterior o igual a la fecha de vencimiento"}), 400
+            except ValueError:
+                return jsonify({"error": "Formato de fecha de recordatorio inválido. Use YYYY-MM-DD"}), 400
         
         # Verificar acceso al tablero
         board = (
@@ -94,17 +87,43 @@ def create_card(board_id, list_id):
         if not target_list:
             return jsonify({"error": f"Lista {list_id} no encontrada en el tablero"}), 404
         
-        # Calcular posición (al final de la lista)
+        # Validar responsables usando búsqueda flexible
+        valid_assignees = []
+        if assignee_ids:
+            for identifier in assignee_ids:
+                user = None
+                # ID numérico
+                if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
+                    user = User.query.get(int(identifier))
+                # Email
+                elif isinstance(identifier, str) and "@" in identifier:
+                    user = User.query.filter_by(email=identifier.lower()).first()
+                # Nombre o parte del nombre
+                elif isinstance(identifier, str):
+                    user = (
+                        db.session.query(User)
+                        .join(UserBoard, UserBoard.user_id == User.id)
+                        .filter(UserBoard.board_id == board_id)
+                        .filter(User.name.ilike(f"%{identifier.strip()}%"))
+                        .first()
+                    )
+                if user and user not in valid_assignees:
+                    valid_assignees.append(user)
+
+            if not valid_assignees:
+                return jsonify({"error": "No se encontraron responsables válidos"}), 400
+
+
+        # Calcular posición al final de la lista
         last_card = (
             db.session.query(Card)
             .filter_by(list_id=list_id)
             .order_by(Card.position.desc())
             .first()
         )
-        
         new_position = 0 if not last_card else last_card.position + 1
-        
-        # Crear la tarjeta
+
+        # Crear tarjeta solo si los responsables son válidos o no se enviaron responsables
         new_card = Card(
             title=title.strip(),
             description=description,
@@ -116,61 +135,33 @@ def create_card(board_id, list_id):
             reminder_date=reminder_date,
             reminder_message=reminder_message
         )
-        
-        db.session.add(new_card)
-        db.session.flush()  # Para obtener el ID
-        
-        # Asignar responsables
-        if assignee_ids:
-            # Validar que los usuarios tienen acceso al tablero
-            valid_assignees = (
-                db.session.query(User)
-                .join(UserBoard, UserBoard.user_id == User.id)
-                .filter(User.id.in_(assignee_ids), UserBoard.board_id == board_id)
-                .all()
-            )
-            
-            invalid_assignees = set(assignee_ids) - {user.id for user in valid_assignees}
-            if invalid_assignees:
-                return jsonify({
-                    "error": f"Usuarios {list(invalid_assignees)} no tienen acceso al tablero"
-                }), 400
-            
-            # Crear las asignaciones usando la relación many-to-many
+
+        # Asignar responsables válidos
+        if valid_assignees:
             new_card.assignees = valid_assignees
+
+        db.session.add(new_card)
+        db.session.flush()
+
+        
         
         # Asignar etiquetas
         if tag_names:
-            tag_objects = []
-    
             for tag_name in tag_names:
                  # Buscar tag en el board específico
-                 existing_tag = CardTag.query.filter_by(name=tag_name, board_id=board_id).first()
-        
-            if existing_tag:
-                tag_objects.append(existing_tag)
-            else:
-                # Crear nuevo tag en el board
-                new_tag = CardTag(name=tag_name, board_id=board_id)
-                db.session.add(new_tag)
-                tag_objects.append(new_tag)
-    
-        new_card.tags = tag_objects
-        # if tag_ids:
-        #     valid_tags = (
-        #         db.session.query(Tag)
-        #         .filter(Tag.id.in_(tag_ids), Tag.board_id == board_id)
-        #         .all()
-        #     )
-            
-        #     invalid_tags = set(tag_ids) - {tag.id for tag in valid_tags}
-        #     if invalid_tags:
-        #         return jsonify({
-        #             "error": f"Etiquetas {list(invalid_tags)} no pertenecen al tablero"
-        #         }), 400
-            
-        #     new_card.tags = valid_tags
-        
+                tag_name = tag_name.strip().lower()
+                if not tag_name:
+                    continue
+                tag = CardTag.query.filter_by(name=tag_name, board_id=board_id).first()
+
+
+                if not tag:
+                    tag = CardTag(name=tag_name, board_id=board_id)
+                    db.session.add(tag)
+                    db.session.flush()
+                
+                if tag not in new_card.tags:
+                    new_card.tags.append(tag)
         db.session.commit()
         db.session.refresh(new_card)
         
@@ -219,7 +210,7 @@ def get_cards_by_list(board_id, list_id):
         cards = (
             db.session.query(Card)
             .filter_by(list_id=list_id)
-            .order_by(Card.position)
+            .order_by(Card.position.desc())
             .all()
         )
         
@@ -248,7 +239,6 @@ def update_card(board_id, list_id, card_id):
             .filter(UserBoard.user_id == user_id, Board.id == board_id)
             .first()
         )
-        
         if not board:
             return jsonify({"error": "Tablero no encontrado"}), 404
         
@@ -259,11 +249,10 @@ def update_card(board_id, list_id, card_id):
             .filter(Card.id == card_id, Card.list_id == list_id, List.board_id == board_id)
             .first()
         )
-        
         if not card:
             return jsonify({"error": "Tarjeta no encontrada en la lista especificada"}), 404
         
-        # Actualizar campos
+        # Actualizar campos básicos
         if "title" in data:
             if not data["title"].strip():
                 return jsonify({"error": "El título no puede estar vacío"}), 400
@@ -281,60 +270,102 @@ def update_card(board_id, list_id, card_id):
         if "status" in data:
             card.status = data["status"]
         
+        # Validación de fechas
+        today = datetime.utcnow().date()
+        
         if "due_date" in data:
-            if data["due_date"]:
+            due_date_str = data["due_date"]
+            if due_date_str:
                 try:
-                    card.due_date = datetime.strptime(data["due_date"], "%Y-%m-%d")
+                    due_date = datetime.strptime(due_date_str, "%Y-%m-%d")
+                    if due_date.date() < today:
+                        return jsonify({"error": "La fecha de vencimiento no puede ser anterior a hoy"}), 400
+                    card.due_date = due_date
                 except ValueError:
-                    return jsonify({"error": "Formato de fecha inválido"}), 400
+                    return jsonify({"error": "Formato de fecha de vencimiento inválido. Use YYYY-MM-DD"}), 400
             else:
                 card.due_date = None
         
         if "reminder_date" in data:
-            if data["reminder_date"]:
+            reminder_date_str = data["reminder_date"]
+            if reminder_date_str:
                 try:
-                    card.reminder_date = datetime.strptime(data["reminder_date"], "%Y-%m-%dT%H:%M:%S")
+                    reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d")
+                    if reminder_date.date() < today:
+                        return jsonify({"error": "La fecha de recordatorio no puede ser anterior a hoy"}), 400
+                    if card.due_date and reminder_date < card.due_date:
+                        return jsonify({"error": "La fecha de recordatorio debe ser posterior o igual a la fecha de vencimiento"}), 400
+                    card.reminder_date = reminder_date
                 except ValueError:
-                    return jsonify({"error": "Formato de fecha de recordatorio inválido"}), 400
+                    return jsonify({"error": "Formato de fecha de recordatorio inválido. Use YYYY-MM-DD"}), 400
             else:
                 card.reminder_date = None
         
         if "reminder_message" in data:
             card.reminder_message = data["reminder_message"]
 
-        if "assignees" in data:
-            assignee_ids = data["assignees"]
-            if assignee_ids:
-                valid_assignees = (
-                    db.session.query(User)
-                    .join(UserBoard, UserBoard.user_id == User.id)
-                    .filter(User.id.in_(assignee_ids), UserBoard.board_id == board_id)
-                    .all()
-                )
-                card.assignees = valid_assignees
-            else:
-                card.assignees = []
+        # Validar y asignar responsables usando búsqueda flexible
+        if "assignee_ids" in data:
+            identifiers = data["assignee_ids"]  # lista de ID, email o nombres
+            found_members = []
+
+            if identifiers:
+                for identifier in identifiers:
+                    user = None
+
+                    # ID numérico
+                    if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
+                        user = User.query.get(int(identifier))
+
+                    # Email
+                    elif isinstance(identifier, str) and "@" in identifier:
+                        user = User.query.filter_by(email=identifier.lower()).first()
+
+                    # Nombre o parte del nombre
+                    elif isinstance(identifier, str):
+                        user = (
+                            db.session.query(User)
+                            .join(UserBoard, UserBoard.user_id == User.id)
+                            .filter(UserBoard.board_id == board_id)
+                            .filter(User.name.ilike(f"%{identifier.strip()}%"))
+                            .first()
+                        )
+
+                    if user and user not in found_members:
+                        found_members.append(user)
+
+                if not found_members:
+                    return jsonify({"error": "No se encontraron responsables válidos"}), 400
+
+            card.assignees = found_members
         
+        # Actualizar tags como lista de nombres
         if "tags" in data:
-            tag_ids = data["tags"]
-            if tag_ids:
-                valid_tags = (
-                    db.session.query(CardTag)
-                    .filter(CardTag.id.in_(tag_ids), CardTag.board_id == board_id)
-                    .all()
-                )
-                card.tags = valid_tags
-            else:
-                card.tags = []
-        
+            new_tag_names = data["tags"]  # lista de strings
+            card.tags = []  # Limpiar tags actuales
+            if new_tag_names:
+                for tag_name in new_tag_names:
+                    tag_name = tag_name.strip().lower()
+                    if not tag_name:
+                        continue
+
+                    # Buscar tag en el board
+                    tag = CardTag.query.filter_by(name=tag_name, board_id=board_id).first()
+                    if not tag:
+                        tag = CardTag(name=tag_name, board_id=board_id)
+                        db.session.add(tag)
+                        db.session.flush()  # para obtener ID
+
+                    if tag not in card.tags:
+                        card.tags.append(tag)
+
         db.session.commit()
-        
         return jsonify({
             "success": True,
             "message": "Tarjeta actualizada exitosamente",
             "card": card.to_dict()
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Error al actualizar tarjeta {card_id}: {str(e)}")
         db.session.rollback()

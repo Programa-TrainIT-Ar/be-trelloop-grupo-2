@@ -7,7 +7,6 @@ class CardTag(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(50), nullable=False)
-    color = db.Column(db.String(20), nullable=False, default="#414141")
     board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
 
     __table_args__ = (db.UniqueConstraint('name', 'board_id', name='unique_cardtag_per_board'),)

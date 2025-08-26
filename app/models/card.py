@@ -1,6 +1,6 @@
 from ..database.database import db
 from datetime import datetime
-from .relationships import card_tag
+from .relationships import card_tags_assoc
 
 class Card(db.Model):
     """Card model for individual tasks within lists"""
@@ -30,7 +30,7 @@ class Card(db.Model):
     # Many-to-many relationship with tags
     tags = db.relationship(
         'CardTag',
-        secondary=card_tag,
+        secondary=card_tags_assoc,
         backref='cards'
     )
 
