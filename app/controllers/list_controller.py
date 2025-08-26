@@ -94,31 +94,74 @@ def create_list(board_id):
 
 def delete_list(board_id, list_id):
     user_id = int(get_jwt_identity())
+
     searched_board = (
-            db.session.query(Board)
-            .join(UserBoard, UserBoard.board_id == Board.id)
-            .filter(UserBoard.user_id == user_id,
-                    Board.id == board_id)
-            .first()
-        )
+        db.session.query(Board)
+        .join(UserBoard, UserBoard.board_id == Board.id)
+        .filter(UserBoard.user_id == user_id, Board.id == board_id)
+        .first()
+    )
     if searched_board is None:
         return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
-    
-    if searched_board.owner_id != user_id:
-     return jsonify({"error": "No tienes permiso para eliminar este tablero"}), 403
-    
+
     searched_list = next((l for l in searched_board.lists if l.id == list_id), None)
-    
     if searched_list is None:
         return jsonify({"error": f"La lista con id: {list_id} no fue encontrada en el tablero"}), 404
-    
-    if db.session.query(Card).join(List).filter(
-    List.id == list_id,
-    List.board_id == board_id
-    ).count() > 0:
-        return jsonify({"error": "La lista no está vacía. Elimina primero las tarjetas."}), 400
-    
+
+    #Nuevo criterio: Cualquier miembro puede eliminar la lista, tenga o no tarjetas.
     db.session.delete(searched_list)
     db.session.commit()
-
     return '', 204
+
+def update_list(board_id, list_id):
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+
+        # Validar que se envíe el nombre
+        name = data.get("name")
+        if not name or not name.strip():
+            return jsonify({"error": "El campo 'name' es requerido y no puede estar vacío"}), 400
+        
+        # Validar longitud del nombre
+        if len(name.strip()) > 50:
+            return jsonify({"error": "El nombre de la lista no puede exceder 50 caracteres"}), 400
+
+        # Verificar que el usuario tenga acceso al tablero
+        searched_board = (
+            db.session.query(Board)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id, Board.id == board_id)
+            .first()
+        )
+
+        if searched_board is None:
+            return jsonify({"error": f"El tablero con id: {board_id} no fue encontrado"}), 404
+
+        # Buscar la lista específica dentro del tablero
+        searched_list = (
+            db.session.query(List)
+            .filter_by(id=list_id, board_id=board_id)
+            .first()
+        )
+
+        if searched_list is None:
+            return jsonify({"error": f"La lista con id: {list_id} no fue encontrada en el tablero"}), 404
+
+        # Actualizar el nombre de la lista
+        searched_list.name = name.strip()
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Lista actualizada correctamente",
+            "list": searched_list.to_dict()
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error al actualizar la lista {list_id} del tablero {board_id}: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": "Error interno del servidor"
+        }), 500

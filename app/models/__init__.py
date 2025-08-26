@@ -4,6 +4,7 @@ from .list import List
 from .card import Card, CardComment, CardAssignee
 from .relationships import UserBoard
 from .tag import Tag
+from .card_tag import CardTag
 
 __all__ = [
     'User',
@@ -12,6 +13,7 @@ __all__ = [
     'Tag',
     'List',
     'Card',
+    'CardTag',
     'CardComment',
     'CardAssignee'
 ]
