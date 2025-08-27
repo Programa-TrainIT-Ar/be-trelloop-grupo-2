@@ -55,13 +55,7 @@ class Card(db.Model):
             'status': self.list.name if self.list else self.status,
             'reminder_date': self.reminder_date.isoformat() if self.reminder_date else None,
             'reminder_message': self.reminder_message,
-            'assignees': [
-                {
-                    'id': user.id,
-                    'name': user.name,
-                    'email': user.email
-                } for user in self.assignees
-            ] if self.assignees else [],
+            'assignees': [user.to_dict_basic() for user in self.assignees] if self.assignees else [],
             'tags': [
                 {
                     'id': tag.id,

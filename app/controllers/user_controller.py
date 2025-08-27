@@ -1,4 +1,5 @@
 from app.models.user import User
+from app.models.relationships import UserBoard
 from app.database.database import db
 from flask import jsonify ,request
 from ..logs.logger import logger
@@ -55,6 +56,39 @@ def search_users():
         return jsonify({
             "success": False,
             "message": "Error interno al buscar usuarios"
+        }), 500
+    
+def search_assignees(board_id):
+    try:
+        query = request.args.get('q', '').strip()
+
+        if not query:
+            return jsonify({
+                "success": False,
+                "message": "La consulta de búsqueda es requerida"
+            }), 400
+
+        # Filtramos solo miembros del board
+        users = (
+            User.query
+            .join(UserBoard, UserBoard.user_id == User.id)
+            .filter(
+                UserBoard.board_id == board_id,
+                or_(
+                    User.name.ilike(f"%{query}%"),
+                    User.email.ilike(f"%{query}%")
+                )
+            )
+            .limit(10)
+            .all()
+        )
+
+        return jsonify([user.to_dict_basic() for user in users]), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error al buscar usuarios: {str(e)}"
         }), 500
 
 def protected_users():
