@@ -12,9 +12,10 @@ class Card(db.Model):
     list_id = db.Column(db.Integer, db.ForeignKey('lists.id'), nullable=False)
     position = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    due_date = db.Column(db.DateTime, nullable=True)
+    start_date = db.Column(db.DateTime, nullable=True)
     priority = db.Column(db.String(20), nullable=True, default='low')  # 'low', 'medium', 'high'
     status = db.Column(db.String(20), default='pending')
+    end_date = db.Column(db.DateTime, nullable=True)
     reminder_date = db.Column(db.DateTime, nullable=True)
     reminder_message = db.Column(db.String(255), nullable=True)
 
@@ -50,10 +51,11 @@ class Card(db.Model):
             'list_id': self.list_id,
             'position': self.position,
             'created_at': self.created_at.isoformat(),
-            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'start_date': self.start_date.date().isoformat() if self.start_date else None,
+            'reminder_date': self.reminder_date.date().isoformat() if self.reminder_date else None,
             'priority': priority_map.get(self.priority, self.priority),
             'status': self.list.name if self.list else self.status,
-            'reminder_date': self.reminder_date.isoformat() if self.reminder_date else None,
+            'end_date': self.end_date.date().isoformat() if self.end_date else None,
             'reminder_message': self.reminder_message,
             'assignees': [user.to_dict_basic() for user in self.assignees] if self.assignees else [],
             'tags': [

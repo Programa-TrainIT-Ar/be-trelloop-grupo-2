@@ -42,30 +42,44 @@ def create_card(board_id, list_id):
         today = datetime.utcnow().date()
 
         # Due date
-        due_date = None
-        due_date_str = data.get("due_date")
-        if due_date_str:
+        start_date = None
+        start_date_str = data.get("start_date")
+        if start_date_str:
             try:
-                due_date = datetime.strptime(due_date_str, "%Y-%m-%d")
-                if due_date.date() < today:
-                    return jsonify({"error": "La fecha de vencimiento no puede ser anterior a hoy"}), 400
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+                if start_date.date() < today:
+                    return jsonify({"error": "La fecha de inicio no puede ser anterior a hoy"}), 400
             except ValueError:
-                return jsonify({"error": "Formato de fecha inválido. Use YYYY-MM-DD"}), 400
+                return jsonify({"error": "Formato de fecha de inicio inválido. Use YYYY-MM-DD"}), 400
+        
+        # End date
+        end_date = None
+        end_date_str = data.get("end_date")
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+                if end_date.date() < today:
+                    return jsonify({"error": "La fecha de finalizacion no puede ser anterior a hoy"}), 400
+                if start_date and end_date < start_date:
+                    return jsonify({"error": "La fecha de finalización debe ser posterior o igual a la fecha de inicio"}), 400
+            except ValueError:
+                return jsonify({"error": "Formato de fecha de finalización inválido. Use YYYY-MM-DD"}), 400
         
         # Reminder date
-        reminder_date = None
         reminder_message = data.get("reminder_message", "")
+        reminder_date = None
         reminder_date_str = data.get("reminder_date")
+        
         if reminder_date_str:
             try:
                 reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d")
-                if reminder_date.date() < today:
-                    return jsonify({"error": "La fecha de recordatorio no puede ser anterior a hoy"}), 400
-                if due_date and reminder_date < due_date:
-                    return jsonify({"error": "La fecha de recordatorio debe ser posterior o igual a la fecha de vencimiento"}), 400
+                if start_date and reminder_date < start_date:
+                    return jsonify({"error": "La fecha de recordatorio no puede ser anterior a la fecha de inicio"}), 400
+                if end_date and reminder_date > end_date:
+                    return jsonify({"error": "La fecha de recordatorio no puede ser posterior a la fecha de finalización"}), 400
             except ValueError:
                 return jsonify({"error": "Formato de fecha de recordatorio inválido. Use YYYY-MM-DD"}), 400
-        
+
         # Verificar acceso al tablero
         board = (
             db.session.query(Board)
@@ -129,11 +143,12 @@ def create_card(board_id, list_id):
             description=description,
             list_id=list_id,
             position=new_position,
-            due_date=due_date,
+            start_date=start_date,
             priority=priority,
             status=status,
-            reminder_date=reminder_date,
-            reminder_message=reminder_message
+            end_date=end_date,
+            reminder_message=reminder_message,
+            reminder_date=reminder_date
         )
 
         # Asignar responsables válidos
@@ -273,34 +288,51 @@ def update_card(board_id, list_id, card_id):
         # Validación de fechas
         today = datetime.utcnow().date()
         
-        if "due_date" in data:
-            due_date_str = data["due_date"]
-            if due_date_str:
+        if "start_date" in data:
+            start_date_str = data["start_date"]
+            if start_date_str:
                 try:
-                    due_date = datetime.strptime(due_date_str, "%Y-%m-%d")
-                    if due_date.date() < today:
+                    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+                    if start_date.date() < today:
+                        return jsonify({"error": "La fecha de inicio no puede ser anterior a hoy"}), 400
+                    card.start_date = start_date
+                except ValueError:
+                    return jsonify({"error": "Formato de fecha de inicio inválido. Use YYYY-MM-DD"}), 400
+            else:
+                card.start_date = None
+        
+        if "end_date" in data:
+            end_date_str = data["end_date"]
+            if end_date_str:
+                try:
+                    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+                    if end_date.date() < today:
                         return jsonify({"error": "La fecha de vencimiento no puede ser anterior a hoy"}), 400
-                    card.due_date = due_date
+                    if card.start_date and end_date < card.start_date:
+                        return jsonify({"error": "La fecha de vencimiento debe ser posterior o igual a la fecha de inicio"}), 400
+                    card.end_date = end_date
                 except ValueError:
                     return jsonify({"error": "Formato de fecha de vencimiento inválido. Use YYYY-MM-DD"}), 400
             else:
-                card.due_date = None
-        
+                card.end_date = None
+        # Reminder date
         if "reminder_date" in data:
             reminder_date_str = data["reminder_date"]
             if reminder_date_str:
                 try:
                     reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d")
-                    if reminder_date.date() < today:
-                        return jsonify({"error": "La fecha de recordatorio no puede ser anterior a hoy"}), 400
-                    if card.due_date and reminder_date < card.due_date:
-                        return jsonify({"error": "La fecha de recordatorio debe ser posterior o igual a la fecha de vencimiento"}), 400
+                    # Validar que sea >= start_date
+                    if card.start_date and reminder_date < card.start_date:
+                        return jsonify({"error": "La fecha de recordatorio no puede ser anterior a la fecha de inicio"}), 400
+                    # Validar que sea <= end_date
+                    if card.end_date and reminder_date > card.end_date:
+                        return jsonify({"error": "La fecha de recordatorio no puede ser posterior a la fecha de finalización"}), 400
                     card.reminder_date = reminder_date
                 except ValueError:
                     return jsonify({"error": "Formato de fecha de recordatorio inválido. Use YYYY-MM-DD"}), 400
             else:
                 card.reminder_date = None
-        
+                
         if "reminder_message" in data:
             card.reminder_message = data["reminder_message"]
 
