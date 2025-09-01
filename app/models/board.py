@@ -45,7 +45,7 @@ class Board(db.Model):
             'status': self.status.value,
             'board_image_url': self.board_image_url,
             'members': [member.to_dict_basic() for member in self.members],
-            'tags': [tag.name for tag in self.tags],
+            'tags': [tag.to_dict() for tag in self.tags],
             'created_at': self.created_at.isoformat(),
             'lists': [list.to_dict() for list in self.lists]
         }
