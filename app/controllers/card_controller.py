@@ -181,6 +181,7 @@ def create_card(board_id, list_id):
         db.session.refresh(new_card)
         
         logger.info(f"Tarjeta '{title}' creada en lista {list_id} por usuario {user_id}")
+        logger.info(f"Nueva Tarjeta: {new_card.to_dict()}")
         
         return jsonify({
             "success": True,
