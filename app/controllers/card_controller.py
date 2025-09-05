@@ -242,6 +242,50 @@ def get_cards_by_list(board_id, list_id):
             "success": False,
             "message": "Error interno del servidor"
         }), 500
+def get_card_by_id(board_id, list_id, card_id):
+    try:
+        user_id = int(get_jwt_identity())
+        
+        # Verificar acceso al tablero
+        board = (
+            db.session.query(Board)
+            .join(UserBoard, UserBoard.board_id == Board.id)
+            .filter(UserBoard.user_id == user_id, Board.id == board_id)
+            .first()
+        )
+        
+        if not board:
+            return jsonify({"error": f"Tablero {board_id} no encontrado"}), 404
+        
+        # Verificar que la lista existe
+        target_list = (
+            db.session.query(List)
+            .filter_by(id=list_id, board_id=board_id)
+            .first()
+        )
+        
+        if not target_list:
+            return jsonify({"error": f"Lista {list_id} no encontrada"}), 404
+    
+        card = (
+            db.session.query(Card)
+            .filter_by(id=card_id, list_id=list_id)
+            .first()
+        )
+        if not card:
+            return jsonify({"error": f"Tarjeta {card_id} no encontrada en la lista {list_id}"}), 404
+        
+        return jsonify({
+            "success": True,
+            "card": card.to_dict()
+        }), 200
+    except Exception as e:
+        logger.error(f"Error al obtener tarjeta {card_id} de la lista {list_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error interno del servidor"
+        }), 500
+    
 
 def update_card(board_id, list_id, card_id):
     try:
