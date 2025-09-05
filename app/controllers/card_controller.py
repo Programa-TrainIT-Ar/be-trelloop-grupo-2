@@ -38,8 +38,7 @@ def create_card(board_id, list_id):
         tag_names = data.get("tags", [])
         assignee_ids = data.get("assignee_ids", [])
         
-        # Validación de fechas
-        today = datetime.utcnow().date()
+        
 
         # Due date
         start_date = None
@@ -47,8 +46,7 @@ def create_card(board_id, list_id):
         if start_date_str:
             try:
                 start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-                if start_date.date() < today:
-                    return jsonify({"error": "La fecha de inicio no puede ser anterior a hoy"}), 400
+                
             except ValueError:
                 return jsonify({"error": "Formato de fecha de inicio inválido. Use YYYY-MM-DD"}), 400
         
@@ -58,8 +56,6 @@ def create_card(board_id, list_id):
         if end_date_str:
             try:
                 end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-                if end_date.date() < today:
-                    return jsonify({"error": "La fecha de finalizacion no puede ser anterior a hoy"}), 400
                 if start_date and end_date < start_date:
                     return jsonify({"error": "La fecha de finalización debe ser posterior o igual a la fecha de inicio"}), 400
             except ValueError:
@@ -330,16 +326,13 @@ def update_card(board_id, list_id, card_id):
         if "status" in data:
             card.status = data["status"]
         
-        # Validación de fechas
-        today = datetime.utcnow().date()
+        
         
         if "start_date" in data:
             start_date_str = data["start_date"]
             if start_date_str:
                 try:
                     start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-                    if start_date.date() < today:
-                        return jsonify({"error": "La fecha de inicio no puede ser anterior a hoy"}), 400
                     card.start_date = start_date
                 except ValueError:
                     return jsonify({"error": "Formato de fecha de inicio inválido. Use YYYY-MM-DD"}), 400
@@ -351,8 +344,6 @@ def update_card(board_id, list_id, card_id):
             if end_date_str:
                 try:
                     end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-                    if end_date.date() < today:
-                        return jsonify({"error": "La fecha de vencimiento no puede ser anterior a hoy"}), 400
                     if card.start_date and end_date < card.start_date:
                         return jsonify({"error": "La fecha de vencimiento debe ser posterior o igual a la fecha de inicio"}), 400
                     card.end_date = end_date
