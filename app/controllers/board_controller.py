@@ -1,7 +1,7 @@
 from app.models.user import User
 from app.models.board import Board
 from app.models.tag import Tag
-from app.models.relationships import UserBoard
+from app.models.relationships import UserBoard, BoardRoleEnum
 from app.database.database import db
 from flask import jsonify ,request
 from flask_jwt_extended import get_jwt_identity
@@ -30,7 +30,10 @@ def create_board():
         user_id = int(get_jwt_identity())
         name = data.get("name")
         description = data.get("description")
-        owner_id = user_id
+        owner_id = user_id #.id if user_id else None
+        if not owner_id:
+            return jsonify({'error': "Dueño del tablero no encontrado"}), 
+    
         status = data.get("status", "PRIVATE").upper()
         tag_names = data.getlist('tags') if request.content_type.startswith("multipart/form-data") else data.get('tags', [])
         member_ids = data.getlist('members') if request.content_type.startswith("multipart/form-data") else data.get('members', [])
@@ -45,6 +48,17 @@ def create_board():
             status=status,
             board_image_url=board_image_url
         )
+
+        db.session.add(new_board)
+        db.session.commit() # Necesario para obtener el new_board.id
+
+         # 🆕 Añadir al dueño con rol 'OWNER'
+        owner_relationship = UserBoard(
+            user_id=owner_id,
+            board_id=new_board.id,
+            role=BoardRoleEnum.OWNER
+        )
+        db.session.add(owner_relationship)
 
         for uid in member_ids:
             user = User.query.get(uid)
@@ -84,6 +98,148 @@ def create_board():
             "success": False,
             "message": "Error al crear una tabla"
         }), 500
+
+
+@jwt_required()
+def add_member(board_id):
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        new_member_email = data.get("email")
+        new_member_role = data.get("role", "member").lower()
+
+        if not new_member_email:
+            return jsonify({"error": "El email del nuevo miembro es requerido"}), 400
+
+        # Verificar si el usuario actual es ADMIN o OWNER
+        current_user_relationship = UserBoard.query.filter_by(user_id=user_id, board_id=board_id).first()
+        if not current_user_relationship or current_user_relationship.role not in [BoardRoleEnum.ADMIN, BoardRoleEnum.OWNER]:
+            return jsonify({"error": "No tienes permiso para agregar miembros"}), 403
+
+        # Encontrar el tablero y el nuevo usuario
+        board = Board.query.get(board_id)
+        if not board:
+            return jsonify({"error": "Tablero no encontrado"}), 404
+
+        new_user = User.query.filter_by(email=new_member_email).first()
+        if not new_user:
+            return jsonify({"error": "Usuario con ese email no encontrado"}), 404
+        
+        # Verificar si el usuario ya es miembro
+        if UserBoard.query.filter_by(user_id=new_user.id, board_id=board_id).first():
+            return jsonify({"message": "El usuario ya es miembro de este tablero"}), 409
+
+        # Agregar al nuevo miembro con su rol
+        new_relationship = UserBoard(
+            user_id=new_user.id,
+            board_id=board.id,
+            role=BoardRoleEnum(new_member_role)
+        )
+        db.session.add(new_relationship)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Miembro agregado exitosamente",
+            "member": new_user.to_dict_basic(),
+            "role": new_member_role
+        }), 201
+
+    except ValueError:
+        return jsonify({"error": "El rol especificado no es válido"}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+
+@jwt_required()
+def remove_member(board_id, member_id):
+    try:
+        current_user_id = int(get_jwt_identity())
+
+        # Verificar si el usuario actual tiene permisos
+        current_user_relationship = UserBoard.query.filter_by(user_id=current_user_id, board_id=board_id).first()
+        if not current_user_relationship or current_user_relationship.role not in [BoardRoleEnum.ADMIN, BoardRoleEnum.OWNER]:
+            return jsonify({"error": "No tienes permiso para eliminar miembros"}), 403
+
+        # No se puede eliminar a uno mismo
+        if current_user_id == member_id:
+            return jsonify({"error": "No puedes eliminarte a ti mismo del tablero"}), 403
+
+        # Encontrar la relación a eliminar
+        member_relationship = UserBoard.query.filter_by(user_id=member_id, board_id=board_id).first()
+        if not member_relationship:
+            return jsonify({"error": "El usuario no es miembro de este tablero"}), 404
+
+        # Lógica de permisos de eliminación
+        if current_user_relationship.role == BoardRoleEnum.ADMIN and member_relationship.role in [BoardRoleEnum.ADMIN, BoardRoleEnum.OWNER]:
+            return jsonify({"error": "Un administrador no puede eliminar a otro administrador o al dueño"}), 403
+            
+        # Verificar que siempre haya un dueño
+        if member_relationship.role == BoardRoleEnum.OWNER and len(board.members) > 1:
+            return jsonify({"error": "No puedes eliminar al dueño del tablero"}), 403
+
+
+        db.session.delete(member_relationship)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Miembro eliminado exitosamente"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@jwt_required()
+def update_member_role(board_id, member_id):
+    try:
+        current_user_id = int(get_jwt_identity())
+        data = request.get_json()
+        new_role_str = data.get("role").lower()
+
+        # Verificar si el usuario actual tiene permisos
+        current_user_relationship = UserBoard.query.filter_by(user_id=current_user_id, board_id=board_id).first()
+        if not current_user_relationship or current_user_relationship.role not in [BoardRoleEnum.ADMIN, BoardRoleEnum.OWNER]:
+            return jsonify({"error": "No tienes permiso para cambiar roles"}), 403
+        
+        # El dueño no puede cambiarse a sí mismo
+        if current_user_id == member_id:
+             return jsonify({"error": "No puedes cambiar tu propio rol"}), 403
+
+        # Encontrar la relación a modificar
+        member_relationship = UserBoard.query.filter_by(user_id=member_id, board_id=board_id).first()
+        if not member_relationship:
+            return jsonify({"error": "El usuario no es miembro de este tablero"}), 404
+
+        # Lógica de permisos para la actualización
+        if current_user_relationship.role == BoardRoleEnum.ADMIN:
+            if new_role_str == BoardRoleEnum.ADMIN.value:
+                return jsonify({"error": "Un administrador no puede promover a otro miembro a administrador"}), 403
+            if member_relationship.role == BoardRoleEnum.OWNER:
+                return jsonify({"error": "Un administrador no puede cambiar el rol del dueño"}), 403
+        
+        # No se puede eliminar al dueño del tablero de esa forma
+        if member_relationship.role == BoardRoleEnum.OWNER and new_role_str != BoardRoleEnum.OWNER.value:
+            return jsonify({"error": "No puedes degradar al dueño del tablero"}), 403
+            
+
+        member_relationship.role = BoardRoleEnum(new_role_str)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Rol de miembro actualizado",
+            "new_role": new_role_str
+        }), 200
+
+    except ValueError:
+        return jsonify({"error": "El rol especificado no es válido"}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 def get_all_boards():
