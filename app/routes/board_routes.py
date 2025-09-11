@@ -1,7 +1,16 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
 from flasgger.utils import swag_from
-from ..controllers.board_controller import create_board, get_all_boards, get_board_by_id, get_boards_by_user, update_board, delete_board, toggle_favorite
+from ..controllers.board_controller import (create_board, 
+get_all_boards, 
+get_board_by_id, 
+get_boards_by_user, 
+update_board, 
+delete_board, 
+toggle_favorite, 
+add_member,
+remove_member,
+update_member_role)
 
 board_bp = Blueprint('board', __name__, url_prefix='/api/boards')
 
@@ -46,3 +55,18 @@ def handle_delete_board(board_id):
 @jwt_required()
 def handle_toggle_favorite(board_id):
     return toggle_favorite(board_id)
+
+@board_bp.route('/<int:board_id>/members', methods=['POST'])
+@jwt_required()
+def handle_add_member(board_id):
+    return add_member(board_id)
+
+@board_bp.route('/<int:board_id>/members/<int:member_id>', methods=['DELETE'])
+@jwt_required()
+def handle_remove_member(board_id, member_id):
+    return remove_member(board_id, member_id)
+
+@board_bp.route('/<int:board_id>/members/<int:member_id>/role', methods=['PUT'])
+@jwt_required()
+def handle_update_member_role(board_id, member_id):
+    return update_member_role(board_id, member_id)

@@ -2,16 +2,12 @@
 
 Sigue estos pasos para preparar el proyecto en tu entorno local:
 
-### 0.1 Inicializar el repositorio con git init
+### 0.1 Inicializar una carpera en blanco
+
+### 0.1. En la carpeta en blanco
 
 ```bash
-git init
-```
-
-### 0.1. En la carpeta inicializada
-
-```bash
-git remote add origin https://github.com/Programa-TrainIT-Ar/be-trelloop-grupo-2
+git clone https://github.com/Programa-TrainIT-Ar/be-trelloop-grupo-2 .
 ```
 
 ### 0.2. Hacer un git pull
@@ -73,17 +69,21 @@ python -m app.main
 Bienvenido a la documentación interactiva de la API de Trelloop. Aquí encontrarás toda la información necesaria para interactuar con nuestros servicios, desde la autenticación de usuarios hasta la gestión de tableros, listas y tarjetas.
 
 ## Accediendo a la Documentación
+
 Nuestra API está documentada utilizando Swagger UI, lo que te permite explorar y probar los endpoints directamente desde tu navegador.
 
 ## URL de la Documentación
+
 Una vez que la aplicación esté corriendo localmente, puedes acceder a la documentación en la siguiente URL:
 
 http://localhost:5000/docs/
 
 ## Uso de Swagger UI
+
 La interfaz de Swagger UI organiza los endpoints por etiquetas (tags), como "Authentication", "Boards", etc. Para usar la API, sigue estos pasos:
 
 ### 1. Autenticación (Obtener un Token JWT)
+
 Para interactuar con la mayoría de los endpoints de la API, necesitarás un token de autenticación JWT.
 
 Paso a Paso:
@@ -101,6 +101,7 @@ Paso a Paso:
 6. En la sección de Responses, verás la respuesta de la API que incluirá tu token JWT. Cópialo (será una cadena larga).
 
 ### 2. Autorizar Solicitudes
+
 Una vez que tengas tu token JWT, deberás usarlo para autorizar tus solicitudes a los endpoints protegidos:
 
 #### Paso a Paso:
@@ -118,6 +119,7 @@ Una vez que tengas tu token JWT, deberás usarlo para autorizar tus solicitudes 
 5. Verás que los iconos de candado junto a los endpoints protegidos ahora aparecerán "cerrados" o "autorizados".
 
 ### 3. Probar Endpoints Protegidos
+
 Ahora que estás autorizado, puedes probar los demás endpoints:
 
 - Paso a Paso:
