@@ -7,12 +7,13 @@ card_bp = Blueprint('card', __name__, url_prefix='/api/boards')
 
 @card_bp.route('/<int:board_id>/lists/<int:list_id>/cards', methods=['POST'])
 @jwt_required()
-# @swag_from('../swagger_docs/cards/create_card.yaml')  # documentación Swagger
+@swag_from('../swagger_docs/cards/create_card.yaml')
 def handle_create_card(board_id, list_id):
     return create_card(board_id, list_id)
 
 @card_bp.route('/<int:board_id>/lists/<int:list_id>/cards', methods=['GET'])
 @jwt_required()
+@swag_from('../swagger_docs/cards/get_cards_by_list.yaml')
 def handle_get_cards_by_list(board_id, list_id):
     return get_cards_by_list(board_id, list_id)
 
