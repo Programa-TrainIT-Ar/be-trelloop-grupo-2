@@ -485,7 +485,7 @@ def delete_board(board_id):
         db.session.delete(searched_board)
         db.session.commit()
 
-        return jsonify(searched_board.to_dict()), 202
+        return  jsonify({"success": True, "message": "Board eliminado"}), 200
 
     except Exception as e:
         db.session.rollback()

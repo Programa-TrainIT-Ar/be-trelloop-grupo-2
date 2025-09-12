@@ -22,17 +22,18 @@ class Board(db.Model):
     status = db.Column(SQLEnum(BoardStatusEnum, name='board_status', create_type=True), nullable=False, default=BoardStatusEnum.PRIVATE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    members = db.relationship('User', secondary='user_board', back_populates="boards")
-    tags = db.relationship('Tag', secondary=board_tag, back_populates='boards')
+    members = db.relationship('User', secondary='user_board', back_populates="boards", cascade="all", passive_deletes=True)
+    tags = db.relationship('Tag', secondary=board_tag, back_populates='boards', cascade="all, delete",passive_deletes=True)
     lists = db.relationship(
     'List',
     back_populates='board',
     cascade='all, delete-orphan',
+    passive_deletes=True,
     lazy=True,
     order_by=lambda: List.position
     )
 
-    userboard_relationships = db.relationship("UserBoard", backref="board", lazy=True)
+    userboard_relationships = db.relationship("UserBoard", backref="board", lazy=True, cascade="all, delete-orphan", passive_deletes=True)
 
 
     def to_dict(self):

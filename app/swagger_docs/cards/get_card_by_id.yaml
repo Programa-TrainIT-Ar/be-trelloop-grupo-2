@@ -1,0 +1,159 @@
+tags:
+  - Cards
+summary: Obtiene una tarjeta específica por su ID.
+operationId: getCardById
+description: |
+  Este endpoint permite a un usuario autenticado obtener los detalles de una tarjeta
+  específica dentro de una lista y tablero determinados.
+  Solo un miembro del tablero puede acceder a esta información.
+security:
+  - BearerAuth: []
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero que contiene la lista.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+  - name: list_id
+    in: path
+    description: El ID único de la lista que contiene la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 10
+  - name: card_id
+    in: path
+    description: El ID único de la tarjeta que se desea obtener.
+    required: true
+    type: integer
+    format: int64
+    example: 50
+responses:
+  200:
+    description: Tarjeta obtenida exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        card:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: ID único de la tarjeta.
+              example: 50
+            title:
+              type: string
+              description: Título de la tarjeta.
+              example: Implementar autenticación de usuarios
+            description:
+              type: string
+              description: Descripción detallada de la tarjeta.
+              example: Crear el sistema de login y registro con JWT tokens
+            list_id:
+              type: integer
+              description: ID de la lista a la que pertenece la tarjeta.
+              example: 10
+            position:
+              type: integer
+              description: Posición de la tarjeta dentro de la lista.
+              example: 3
+            priority:
+              type: string
+              description: Nivel de prioridad de la tarjeta.
+              enum: [low, medium, high]
+              example: medium
+            status:
+              type: string
+              description: Estado actual de la tarjeta.
+              example: pending
+            start_date:
+              type: string
+              format: date-time
+              description: Fecha de inicio en formato ISO 8601.
+              example: "2025-09-10T00:00:00.000Z"
+            end_date:
+              type: string
+              format: date-time
+              description: Fecha de finalización en formato ISO 8601.
+              example: "2025-09-20T00:00:00.000Z"
+            reminder_date:
+              type: string
+              format: date-time
+              description: Fecha de recordatorio en formato ISO 8601.
+              example: "2025-09-15T00:00:00.000Z"
+            reminder_message:
+              type: string
+              description: Mensaje personalizado del recordatorio.
+              example: No olvides revisar los requisitos antes de implementar
+            created_at:
+              type: string
+              format: date-time
+              description: Fecha y hora de creación en formato ISO 8601.
+              example: "2025-09-05T14:30:00.000Z"
+            assignees:
+              type: array
+              description: Lista de usuarios asignados a la tarjeta.
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 2
+                  name:
+                    type: string
+                    example: Juan Pérez
+                  email:
+                    type: string
+                    example: juan@example.com
+            tags:
+              type: array
+              description: Lista de etiquetas asociadas a la tarjeta.
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 15
+                  name:
+                    type: string
+                    example: backend
+                  board_id:
+                    type: integer
+                    example: 1
+  401:
+    description: No autorizado. Se requiere un token JWT válido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero, lista o tarjeta no encontrados, o el usuario no es miembro del tablero.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            tablero_no_encontrado: "Tablero 1 no encontrado"
+            lista_no_encontrada: "Lista 10 no encontrada"
+            tarjeta_no_encontrada: "Tarjeta 50 no encontrada en la lista 10"
+  500:
+    description: Error interno del servidor al intentar obtener la tarjeta.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor

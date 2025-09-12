@@ -1,0 +1,66 @@
+tags:
+  - Cards
+summary: Elimina una tarjeta específica por su ID.
+operationId: deleteCard
+description: |
+  Este endpoint permite a un usuario autenticado eliminar una tarjeta 
+  específica de una lista dentro de un tablero.
+  Solo un miembro del tablero puede realizar esta acción.
+security:
+  - BearerAuth: []
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero que contiene la lista.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+  - name: list_id
+    in: path
+    description: El ID único de la lista que contiene la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 10
+  - name: card_id
+    in: path
+    description: El ID único de la tarjeta que se desea eliminar.
+    required: true
+    type: integer
+    format: int64
+    example: 50
+responses:
+  204:
+    description: Tarjeta eliminada exitosamente. No se devuelve contenido.
+  401:
+    description: No autorizado. Se requiere un token JWT válido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero, lista o tarjeta no encontrados, o el usuario no es miembro del tablero.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            tablero_no_encontrado: "Tablero 1 no encontrado"
+            tarjeta_no_encontrada: "Tarjeta 50 no encontrada en la lista 10"
+  500:
+    description: Error interno del servidor al intentar eliminar la tarjeta.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor
