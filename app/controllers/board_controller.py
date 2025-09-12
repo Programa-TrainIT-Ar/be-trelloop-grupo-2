@@ -157,28 +157,33 @@ def add_member(board_id):
 def remove_member(board_id, member_id):
     try:
         current_user_id = int(get_jwt_identity())
-
-        # Verificar si el usuario actual tiene permisos
         current_user_relationship = UserBoard.query.filter_by(user_id=current_user_id, board_id=board_id).first()
         if not current_user_relationship or current_user_relationship.role not in [BoardRoleEnum.ADMIN, BoardRoleEnum.OWNER]:
             return jsonify({"error": "No tienes permiso para eliminar miembros"}), 403
 
-        # No se puede eliminar a uno mismo
         if current_user_id == member_id:
             return jsonify({"error": "No puedes eliminarte a ti mismo del tablero"}), 403
 
-        # Encontrar la relación a eliminar
         member_relationship = UserBoard.query.filter_by(user_id=member_id, board_id=board_id).first()
         if not member_relationship:
             return jsonify({"error": "El usuario no es miembro de este tablero"}), 404
 
-        # Lógica de permisos de eliminación
+        # evitar que un admin elimine admin/owner
         if current_user_relationship.role == BoardRoleEnum.ADMIN and member_relationship.role in [BoardRoleEnum.ADMIN, BoardRoleEnum.OWNER]:
             return jsonify({"error": "Un administrador no puede eliminar a otro administrador o al dueño"}), 403
-            
-        # Verificar que siempre haya un dueño
-        if member_relationship.role == BoardRoleEnum.OWNER and len(board.members) > 1:
+
+        # no eliminar al dueño si hay otros miembros
+        board = Board.query.get(board_id)
+        if member_relationship.role == BoardRoleEnum.OWNER and board and len(board.members) > 1:
             return jsonify({"error": "No puedes eliminar al dueño del tablero"}), 403
+
+        db.session.delete(member_relationship)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Miembro eliminado exitosamente"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
         db.session.delete(member_relationship)
@@ -258,29 +263,49 @@ def get_board_by_id(board_id):
     try:
         board = Board.query.get(board_id)
         if board is None:
-            return jsonify({
-                "success": False,
-                "message": "Board no encontrada"
-            }), 404
+            return jsonify({"success": False, "message": "Board no encontrada"}), 404
 
-        # 🔹 Marcar "último uso" si el usuario es miembro y la columna existe
+        # usuario autenticado (puede no ser miembro)
         try:
             user_id = int(get_jwt_identity())
-            ub = UserBoard.query.filter_by(user_id=user_id, board_id=board_id).first()
-            if ub is not None and hasattr(ub, "last_accessed_at"):
-                ub.last_accessed_at = datetime.utcnow()
+        except Exception:
+            user_id = None
+
+        # relaciones user_board del tablero
+        userboards = UserBoard.query.filter_by(board_id=board.id).all()
+        by_user = {ub.user_id: ub for ub in userboards}
+
+        # miembros con rol
+        members_with_roles = []
+        for m in board.members:
+            ub = by_user.get(m.id)
+            role_value = ub.role.value if ub else "member"
+            basic = m.to_dict_basic()
+            basic["role"] = role_value
+            members_with_roles.append(basic)
+
+        current_user_role = None
+        if user_id and by_user.get(user_id):
+            current_user_role = by_user[user_id].role.value
+
+        # (opcional) marcar último acceso si existe la columna
+        try:
+            if user_id and by_user.get(user_id) is not None and hasattr(by_user[user_id], "last_accessed_at"):
+                by_user[user_id].last_accessed_at = datetime.utcnow()
                 db.session.commit()
-        except Exception as _:
-            # No romper si no existe la columna o falla algo menor
+        except Exception:
             db.session.rollback()
 
-        return jsonify(board.to_dict()), 200
+        payload = board.to_dict()
+        payload["members"] = members_with_roles
+        payload["current_user_role"] = current_user_role
+        payload["owner_id"] = board.owner_id
+
+        return jsonify(payload), 200
+
     except Exception as e:
         logger.error(f"Error al obtener board: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": "Error al obtener la board"
-        }), 500
+        return jsonify({"success": False, "message": "Error al obtener la board"}), 500
         
 def get_boards_by_user():
     try:
