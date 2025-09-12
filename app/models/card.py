@@ -9,7 +9,7 @@ class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True) 
-    list_id = db.Column(db.Integer, db.ForeignKey('lists.id'), nullable=False)
+    list_id = db.Column(db.Integer, db.ForeignKey('lists.id' , ondelete='CASCADE'), nullable=False)
     position = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     start_date = db.Column(db.DateTime, nullable=True)
@@ -25,14 +25,16 @@ class Card(db.Model):
     assignees = db.relationship(
         'User',
         secondary='card_assignees',
-        backref='assigned_cards'
+        backref='assigned_cards',
+        passive_deletes=True
     )
 
     # Many-to-many relationship with tags
     tags = db.relationship(
         'CardTag',
         secondary=card_tags_assoc,
-        backref='cards'
+        backref='cards',
+        passive_deletes=True
     )
 
     def to_dict(self):
@@ -91,5 +93,5 @@ class CardAssignee(db.Model):
     """Card assignee model for many-to-many relationship between users and cards"""
     __tablename__ = 'card_assignees'
     
-    card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    card_id = db.Column(db.Integer, db.ForeignKey('cards.id', ondelete='CASCADE'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)

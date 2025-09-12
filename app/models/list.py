@@ -10,7 +10,7 @@ class List(db.Model):
     name = db.Column(db.String(255), nullable=False)
     position = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    board_id = db.Column(db.Integer, db.ForeignKey('boards.id'), nullable=False)
+    board_id = db.Column(db.Integer, db.ForeignKey('boards.id', ondelete='CASCADE'), nullable=False)
     
     board = db.relationship('Board', back_populates='lists')
     cards = db.relationship(
@@ -18,7 +18,8 @@ class List(db.Model):
         back_populates='list',
         cascade='all, delete-orphan',
         lazy=True,
-        order_by=lambda: db.desc(Card.position)
+        order_by=lambda: db.desc(Card.position),
+        passive_deletes=True
     )
     
     def to_dict(self):

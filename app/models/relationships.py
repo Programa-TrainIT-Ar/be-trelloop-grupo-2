@@ -27,13 +27,13 @@ class UserBoard (db.Model):
 
 board_tag = db.Table(
     'board_tag',
-    db.Column('board_id', db.Integer, db.ForeignKey('boards.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('tags.id'), primary_key=True),
+    db.Column('board_id', db.Integer, db.ForeignKey('boards.id', ondelete="CASCADE"), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tags.id', ondelete="CASCADE"), primary_key=True),
   
 )
 
 card_tags_assoc = db.Table(
     'card_tags_assoc',
-    db.Column('card_id', db.Integer, db.ForeignKey('cards.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('card_tags.id'), primary_key=True)
+    db.Column('card_id', db.Integer, db.ForeignKey('cards.id', ondelete="CASCADE"), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('card_tags.id', ondelete="CASCADE"), primary_key=True)
 )
