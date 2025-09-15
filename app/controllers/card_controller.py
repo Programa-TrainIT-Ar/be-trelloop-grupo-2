@@ -7,9 +7,9 @@ from app.models.user import User
 from app.database.database import db
 from flask import jsonify, request
 from flask_jwt_extended import get_jwt_identity
-from datetime import datetime
 from ..logs.logger import logger
 from datetime import datetime, date
+from ..websocket.broadcast import (broadcast_card_moved, broadcast_card_updated, broadcast_card_created, broadcast_card_deleted)
 
 def create_card(board_id, list_id):
     """
@@ -176,8 +176,10 @@ def create_card(board_id, list_id):
         db.session.commit()
         db.session.refresh(new_card)
         
+        broadcast_card_created(board_id, new_card.to_dict(), user_id)
+
         logger.info(f"Tarjeta '{title}' creada en lista {list_id} por usuario {user_id}")
-        logger.info(f"Nueva Tarjeta: {new_card.to_dict()}")
+        # logger.info(f"Nueva Tarjeta: {new_card.to_dict()}")
         
         return jsonify({
             "success": True,
@@ -238,6 +240,7 @@ def get_cards_by_list(board_id, list_id):
             "success": False,
             "message": "Error interno del servidor"
         }), 500
+    
 def get_card_by_id(board_id, list_id, card_id):
     try:
         user_id = int(get_jwt_identity())
@@ -298,15 +301,64 @@ def update_card(board_id, list_id, card_id):
         if not board:
             return jsonify({"error": "Tablero no encontrado"}), 404
         
-        # Buscar la tarjeta
+        # Buscar la tarjeta (NOTA: puede estar en cualquier lista del board)
         card = (
             db.session.query(Card)
             .join(List, List.id == Card.list_id)
-            .filter(Card.id == card_id, Card.list_id == list_id, List.board_id == board_id)
+            .filter(Card.id == card_id, List.board_id == board_id)
             .first()
         )
         if not card:
             return jsonify({"error": "Tarjeta no encontrada en la lista especificada"}), 404
+        
+        # Variable para detectar si la tarjeta fue movida
+        was_moved = False
+        old_list_id = card.list_id
+        
+        # FUNCIONALIDAD DRAG & DROP
+        if "list_id" in data:
+            new_list_id = data["list_id"]
+            
+            # Validar que la nueva lista existe y pertenece al mismo board
+            target_list = (
+                db.session.query(List)
+                .filter_by(id=new_list_id, board_id=board_id)
+                .first()
+            )
+            
+            if not target_list:
+                return jsonify({
+                    "error": f"La lista destino {new_list_id} no existe o no pertenece al tablero {board_id}"
+                }), 400
+            
+            # Si la tarjeta se mueve a una lista diferente
+            if card.list_id != new_list_id:
+                was_moved = True
+                old_position = card.position
+                
+                # 1. Actualizar el list_id de la tarjeta
+                card.list_id = new_list_id
+                
+                # 2. Recalcular posición en la lista destino (colocar al final)
+                last_card_in_target = (
+                    db.session.query(Card)
+                    .filter_by(list_id=new_list_id)
+                    .order_by(Card.position.desc())
+                    .first()
+                )
+                new_position = 0 if not last_card_in_target else last_card_in_target.position + 1
+                card.position = new_position
+                
+                # 3. Reordenar posiciones en la lista origen
+                cards_in_old_list = (
+                    db.session.query(Card)
+                    .filter(Card.list_id == old_list_id, Card.position > old_position)
+                    .all()
+                )
+                for old_card in cards_in_old_list:
+                    old_card.position -= 1
+                
+                logger.info(f"Tarjeta {card_id} movida de lista {old_list_id} a lista {new_list_id}")
         
         # Actualizar campos básicos
         if "title" in data:
@@ -325,9 +377,7 @@ def update_card(board_id, list_id, card_id):
         
         if "status" in data:
             card.status = data["status"]
-        
-        
-        
+               
         if "start_date" in data:
             start_date_str = data["start_date"]
             if start_date_str:
@@ -428,6 +478,13 @@ def update_card(board_id, list_id, card_id):
                         card.tags.append(tag)
 
         db.session.commit()
+        db.session.refresh(card)
+
+        if was_moved:
+            broadcast_card_moved(board_id, card.to_dict(), user_id)
+        else:
+            broadcast_card_updated(board_id, card.to_dict(), user_id)
+
         return jsonify({
             "success": True,
             "message": "Tarjeta actualizada exitosamente",
@@ -484,6 +541,8 @@ def delete_card(board_id, list_id, card_id):
             remaining_card.position -= 1
 
         db.session.commit()
+
+        broadcast_card_deleted(board_id, card_id, user_id)
         
         logger.info(f"Tarjeta {card_id} eliminada por usuario {user_id}")
         
