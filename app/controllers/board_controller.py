@@ -7,8 +7,6 @@ from flask import jsonify ,request
 from flask_jwt_extended import get_jwt_identity
 from ..logs.logger import logger
 from ..utils.cloudinary_uploader import upload_image_to_cloudinary
-from flask import abort
-from flask_jwt_extended import jwt_required
 from datetime import datetime
 
 #CRUD FOR BOARD
@@ -60,16 +58,17 @@ def create_board():
         )
         db.session.add(owner_relationship)
 
+        # Añadir a los miembros iniciales con rol 'MEMBER'
         for uid in member_ids:
             user = User.query.get(uid)
             if user and user.id != owner_id:
-                new_board.members.append(user)
-
-        owner = User.query.get(owner_id)
-        if owner and owner.id not in [u.id for u in new_board.members]:
-            new_board.members.append(owner)
-
-        db.session.add(new_board)
+                member_relationship = UserBoard(
+                    user_id=user.id,
+                    board_id=new_board.id,
+                    role=BoardRoleEnum.MEMBER
+                )
+                db.session.add(member_relationship)
+        
 
         for tag_name in tag_names:
             tag_name = tag_name.strip().lower()
@@ -84,11 +83,11 @@ def create_board():
             new_board.tags.append(tag)
 
         db.session.commit()
-        logger.info(f"Tabla creada exitosamente: {new_board.name}")
 
         return jsonify({
             "success": True,
             "message": "Tabla creada exitosamente",
+            "board": new_board.to_dict()
         }), 201
 
     except Exception as e:
@@ -100,7 +99,7 @@ def create_board():
         }), 500
 
 
-@jwt_required()
+
 def add_member(board_id):
     try:
         user_id = int(get_jwt_identity())
@@ -153,7 +152,7 @@ def add_member(board_id):
 
 
 
-@jwt_required()
+
 def remove_member(board_id, member_id):
     try:
         current_user_id = int(get_jwt_identity())
@@ -186,19 +185,6 @@ def remove_member(board_id, member_id):
         return jsonify({"error": str(e)}), 500
 
 
-        db.session.delete(member_relationship)
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "message": "Miembro eliminado exitosamente"
-        }), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-@jwt_required()
 def update_member_role(board_id, member_id):
     try:
         current_user_id = int(get_jwt_identity())
@@ -473,7 +459,25 @@ def update_board(board_id):
             found_members.append(owner)
 
         if found_members:
-            searched_board.members = found_members
+            # Limpiar relaciones actuales (excepto OWNER para no perderlo)
+            UserBoard.query.filter(
+                UserBoard.board_id == searched_board.id,
+                UserBoard.role != BoardRoleEnum.OWNER
+            ).delete()
+
+            # Volver a asignar miembros
+            for user in found_members:
+                # Si es el dueño, no lo volvemos a crear
+                if user.id == searched_board.owner_id:
+                    continue
+
+                # Crear relación con rol por defecto MEMBER
+                member_relationship = UserBoard(
+                    user_id=user.id,
+                    board_id=searched_board.id,
+                    role=BoardRoleEnum.MEMBER
+                )
+                db.session.add(member_relationship)
 
 
         db.session.commit()
@@ -519,7 +523,7 @@ def delete_board(board_id):
 
 
 
-@jwt_required()
+
 def toggle_favorite(board_id):
     try:
         user_id = int(get_jwt_identity())

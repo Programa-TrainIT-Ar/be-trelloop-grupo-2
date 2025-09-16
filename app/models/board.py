@@ -33,8 +33,13 @@ class Board(db.Model):
     order_by=lambda: List.position
     )
 
-    userboard_relationships = db.relationship("UserBoard", backref="board", lazy=True, cascade="all, delete-orphan", passive_deletes=True)
-
+    userboard_relationships = db.relationship(
+    "UserBoard",
+    back_populates="board",
+    lazy=True,
+    cascade="all, delete-orphan",
+    passive_deletes=True
+)
 
     def to_dict(self):
         """Convert board to dictionary for API responses"""
@@ -45,7 +50,13 @@ class Board(db.Model):
             'owner_id': self.owner_id,
             'status': self.status.value,
             'board_image_url': self.board_image_url,
-            'members': [member.to_dict_basic() for member in self.members],
+            'members': [
+            {
+                **ub.user.to_dict_basic(),
+                "role": ub.role.value
+            }
+            for ub in self.userboard_relationships
+            ],
             'tags': [tag.to_dict() for tag in self.tags],
             'created_at': self.created_at.isoformat(),
             'lists': [list.to_dict() for list in self.lists]

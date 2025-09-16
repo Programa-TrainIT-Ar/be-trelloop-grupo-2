@@ -17,7 +17,12 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     boards = db.relationship('Board', secondary='user_board', back_populates="members")
-
+    userboard_relationships = db.relationship(
+    "UserBoard",
+    back_populates="user",
+    cascade="all, delete-orphan",
+    passive_deletes=True
+    )
     def set_password(self, password):
         salt = bcrypt.gensalt()
         hashed = bcrypt.hashpw(password.encode('utf-8'), salt)

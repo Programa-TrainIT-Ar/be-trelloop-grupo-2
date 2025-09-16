@@ -15,6 +15,10 @@ class UserBoard (db.Model):
     is_favorite = db.Column(db.Boolean, default=False) #Nuevo campo para el manejo de favoritos
     role = db.Column(SQLEnum(BoardRoleEnum, name = 'board_role', create_type=True), nullable=False, default=BoardRoleEnum.MEMBER) #Nueva columna para el rol.
     
+
+    user = db.relationship("User", back_populates="userboard_relationships")
+    board = db.relationship("Board", back_populates="userboard_relationships")
+    
     def to_dict(self):
         return {
             'id': self.id,
