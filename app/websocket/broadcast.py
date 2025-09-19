@@ -132,3 +132,34 @@ def broadcast_card_deleted(board_id, card_id, deleted_by_user_id):
         
     except Exception as e:
         logger.error(f"Error en broadcast_card_deleted: {str(e)}")
+
+def broadcast_card_reordered(board_id, card_data, reordered_by_user_id):
+    """
+    Envía notificación cuando una tarjeta es reordenada dentro de la misma lista
+    """
+    try:
+        socketio = get_socketio()
+        if not socketio:
+            logger.warning("SocketIO no está disponible para broadcast")
+            return
+            
+        room_name = f'board_{board_id}'
+        
+        event_data = {
+            'type': 'card_reordered',
+            'board_id': board_id,
+            'card': card_data,
+            'reordered_by': reordered_by_user_id,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        socketio.emit(
+            'card_updated', 
+            event_data, 
+            room=room_name
+        )
+        
+        logger.info(f"Broadcast enviado al room {room_name}: tarjeta {card_data.get('id')} reordenada en posición {card_data.get('position')}")
+        
+    except Exception as e:
+        logger.error(f"Error en broadcast_card_reordered: {str(e)}")

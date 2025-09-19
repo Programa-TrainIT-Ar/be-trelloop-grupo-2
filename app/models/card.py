@@ -60,6 +60,13 @@ class Card(db.Model):
             'end_date': self.end_date.date().isoformat() if self.end_date else None,
             'reminder_message': self.reminder_message,
             'assignees': [user.to_dict_basic() for user in self.assignees] if self.assignees else [],
+            'board_members': [
+            {
+                **ub.user.to_dict_basic(),
+                "role": ub.role.value
+            }
+            for ub in (self.list.board.userboard_relationships if self.list and self.list.board else [])
+            ],
             'tags': [
                 {
                     'id': tag.id,
