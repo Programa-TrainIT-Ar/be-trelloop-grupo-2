@@ -22,18 +22,24 @@ class Board(db.Model):
     status = db.Column(SQLEnum(BoardStatusEnum, name='board_status', create_type=True), nullable=False, default=BoardStatusEnum.PRIVATE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    members = db.relationship('User', secondary='user_board', back_populates="boards")
-    tags = db.relationship('Tag', secondary=board_tag, back_populates='boards')
+    members = db.relationship('User', secondary='user_board', back_populates="boards", cascade="all", passive_deletes=True)
+    tags = db.relationship('Tag', secondary=board_tag, back_populates='boards', cascade="all, delete",passive_deletes=True)
     lists = db.relationship(
     'List',
     back_populates='board',
     cascade='all, delete-orphan',
+    passive_deletes=True,
     lazy=True,
     order_by=lambda: List.position
     )
 
-    userboard_relationships = db.relationship("UserBoard", backref="board", lazy=True)
-
+    userboard_relationships = db.relationship(
+    "UserBoard",
+    back_populates="board",
+    lazy=True,
+    cascade="all, delete-orphan",
+    passive_deletes=True
+)
 
     def to_dict(self):
         """Convert board to dictionary for API responses"""
@@ -44,7 +50,13 @@ class Board(db.Model):
             'owner_id': self.owner_id,
             'status': self.status.value,
             'board_image_url': self.board_image_url,
-            'members': [member.to_dict_basic() for member in self.members],
+            'members': [
+            {
+                **ub.user.to_dict_basic(),
+                "role": ub.role.value
+            }
+            for ub in self.userboard_relationships
+            ],
             'tags': [tag.to_dict() for tag in self.tags],
             'created_at': self.created_at.isoformat(),
             'lists': [list.to_dict() for list in self.lists]

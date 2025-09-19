@@ -1,0 +1,150 @@
+tags:
+  - Cards
+summary: Actualiza una tarjeta existente en una lista específica.
+operationId: updateCard
+description: |
+  Este endpoint permite a un usuario autenticado actualizar los datos de una tarjeta existente dentro de una lista específica de un tablero.
+  El usuario debe ser miembro del tablero para poder modificar tarjetas.
+  Se pueden actualizar responsables, etiquetas, fechas y otros atributos de la tarjeta.
+security:
+  - BearerAuth: []
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero que contiene la lista.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+  - name: list_id
+    in: path
+    description: El ID único de la lista que contiene la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 10
+  - name: card_id
+    in: path
+    description: El ID único de la tarjeta a actualizar.
+    required: true
+    type: integer
+    format: int64
+    example: 50
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      description: Campos a actualizar en la tarjeta (todos opcionales).
+      properties:
+        title:
+          type: string
+          description: Nuevo título de la tarjeta. Máximo 255 caracteres.
+          example: Implementar autenticación de usuarios con OAuth2
+        description:
+          type: string
+          description: Descripción actualizada de la tarjeta.
+          example: Crear login/registro con soporte para Google y GitHub
+        priority:
+          type: string
+          enum: [low, medium, high]
+          description: Nivel de prioridad de la tarjeta.
+          example: high
+        status:
+          type: string
+          description: Estado actual de la tarjeta.
+          example: in_progress
+        start_date:
+          type: string
+          format: date
+          description: Fecha de inicio (YYYY-MM-DD). Debe ser >= hoy.
+          example: "2025-09-12"
+        end_date:
+          type: string
+          format: date
+          description: Fecha de finalización (YYYY-MM-DD). Debe ser >= start_date.
+          example: "2025-09-25"
+        reminder_date:
+          type: string
+          format: date
+          description: Fecha de recordatorio. Debe estar entre start_date y end_date.
+          example: "2025-09-20"
+        reminder_message:
+          type: string
+          description: Mensaje personalizado de recordatorio.
+          example: Revisar integración antes del deploy
+        tags:
+          type: array
+          items:
+            type: string
+          description: Lista de etiquetas. Las nuevas serán creadas automáticamente.
+          example: ["frontend", "oauth", "alta prioridad"]
+        assignee_ids:
+          type: array
+          description: Lista de usuarios responsables (ID, email o nombre).
+          items:
+            oneOf:
+              - type: integer
+              - type: string
+          example: [2, "sofia@example.com", "Carlos"]
+responses:
+  200:
+    description: Tarjeta actualizada exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Tarjeta actualizada exitosamente
+        card:
+          $ref: "#/definitions/Card"
+  400:
+    description: Error de validación en los campos enviados.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            titulo_vacio: "El título no puede estar vacío"
+            prioridad_invalida: "Prioridad debe ser: low, medium, high"
+            fecha_invalida: "Formato de fecha inválido. Use YYYY-MM-DD"
+            recordatorio_invalido: "La fecha de recordatorio no puede ser anterior a la fecha de inicio"
+            responsables_invalidos: "No se encontraron responsables válidos"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero, lista o tarjeta no encontrados.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            tablero_no_encontrado: "Tablero 1 no encontrado o sin acceso"
+            lista_no_encontrada: "Lista 10 no encontrada en el tablero"
+            tarjeta_no_encontrada: "Tarjeta 50 no encontrada en la lista especificada"
+  500:
+    description: Error interno del servidor al intentar actualizar la tarjeta.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor
