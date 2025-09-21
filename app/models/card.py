@@ -37,6 +37,8 @@ class Card(db.Model):
         passive_deletes=True
     )
 
+    notifications = db.relationship('Notification', back_populates='card', cascade='all, delete-orphan', passive_deletes=True)
+
     def to_dict(self):
         """Convert card to dictionary for API responses"""
         # Mapear prioridades para el frontend
@@ -78,7 +80,7 @@ class Card(db.Model):
 
 class CardComment(db.Model):
     """Card comment model for user comments on cards"""
-    tablename = 'card_comments'
+    __tablename__ = 'card_comments'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), nullable=False)
