@@ -38,7 +38,7 @@ class Card(db.Model):
     )
 
     notifications = db.relationship('Notification', back_populates='card', cascade='all, delete-orphan', passive_deletes=True)
-
+    comments = db.relationship('CardComment', back_populates='card', cascade='all, delete-orphan', passive_deletes=True)
     def to_dict(self):
         """Convert card to dictionary for API responses"""
         # Mapear prioridades para el frontend
@@ -74,7 +74,8 @@ class Card(db.Model):
                     'id': tag.id,
                     'name': tag.name
                 } for tag in self.tags
-            ] if self.tags else []
+            ] if self.tags else [],
+            'comments': [comment.to_dict() for comment in self.comments] if self.comments else []
         }
 
 
@@ -83,9 +84,10 @@ class CardComment(db.Model):
     __tablename__ = 'card_comments'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), nullable=False)
+    card_id = db.Column(db.Integer, db.ForeignKey('cards.id', ondelete='CASCADE'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     comment = db.Column(db.Text, nullable=False)
+    card = db.relationship("Card", back_populates="comments")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
