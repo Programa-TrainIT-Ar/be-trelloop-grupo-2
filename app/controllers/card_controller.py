@@ -9,7 +9,7 @@ from flask import jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from ..logs.logger import logger
 from datetime import datetime, date
-from ..websocket.broadcast import (broadcast_card_moved, broadcast_card_updated, broadcast_card_created, broadcast_card_deleted)
+from ..websocket.broadcast import (broadcast_card_moved, broadcast_card_updated, broadcast_card_created, broadcast_card_deleted, broadcast_card_reordered)
 
 def create_card(board_id, list_id):
     """
@@ -313,13 +313,16 @@ def update_card(board_id, list_id, card_id):
         
         # Variable para detectar si la tarjeta fue movida
         was_moved = False
+        was_reordered = False
         old_list_id = card.list_id
+        old_position = card.position
         
         # FUNCIONALIDAD DRAG & DROP
-        if "list_id" in data:
-            new_list_id = data["list_id"]
-            
-            # Validar que la nueva lista existe y pertenece al mismo board
+        new_list_id = data.get("list_id", card.list_id)
+        new_position = data.get("position")
+
+        # validar que la lista destino existe y pertenece al mismo board
+        if new_list_id != card.list_id:
             target_list = (
                 db.session.query(List)
                 .filter_by(id=new_list_id, board_id=board_id)
@@ -331,36 +334,89 @@ def update_card(board_id, list_id, card_id):
                     "error": f"La lista destino {new_list_id} no existe o no pertenece al tablero {board_id}"
                 }), 400
             
-            # Si la tarjeta se mueve a una lista diferente
-            if card.list_id != new_list_id:
-                was_moved = True
-                old_position = card.position
+        # CASO 1: Mover entre listas diferentes
+        if new_list_id != card.list_id:
+            was_moved = True
                 
-                # 1. Actualizar el list_id de la tarjeta
-                card.list_id = new_list_id
-                
-                # 2. Recalcular posición en la lista destino (colocar al final)
+            # Determinar posición en lista destino
+            if new_position is not None:
+                # Validar posición específica
+                max_position = (
+                    db.session.query(db.func.max(Card.position))
+                    .filter_by(list_id=new_list_id)
+                    .scalar() or -1
+                )
+
+                if new_position < 0 or new_position > max_position + 1:
+                    return jsonify({
+                        "error": f"Posición inválida. Debe estar entre 0 y {max_position + 1}"
+                    }), 400
+                    
+                target_position = new_position
+            else:
+                # Colocar al final por defecto
                 last_card_in_target = (
                     db.session.query(Card)
                     .filter_by(list_id=new_list_id)
                     .order_by(Card.position.desc())
                     .first()
                 )
-                new_position = 0 if not last_card_in_target else last_card_in_target.position + 1
-                card.position = new_position
+                target_position = 0 if not last_card_in_target else last_card_in_target.position + 1
                 
-                # 3. Reordenar posiciones en la lista origen
-                cards_in_old_list = (
-                    db.session.query(Card)
-                    .filter(Card.list_id == old_list_id, Card.position > old_position)
-                    .all()
-                )
-                for old_card in cards_in_old_list:
-                    old_card.position -= 1
+            # Reorganizar lista origen (cerrar el gap)
+            db.session.query(Card).filter(
+                Card.list_id == old_list_id,
+                Card.position > old_position
+            ).update({Card.position: Card.position - 1})
+
+            # Hacer espacio en lista destino (abrir gap)
+            db.session.query(Card).filter(
+                Card.list_id == new_list_id,
+                Card.position >= target_position
+            ).update({Card.position: Card.position + 1})
                 
-                logger.info(f"Tarjeta {card_id} movida de lista {old_list_id} a lista {new_list_id}")
+            # Actualizar tarjeta
+            card.list_id = new_list_id
+            card.position = target_position
+                
+            logger.info(f"Tarjeta {card_id} movida de lista {old_list_id}:{old_position} a lista {new_list_id}:{target_position}")
         
-        # Actualizar campos básicos
+        # CASO 2: Reordenar dentro de la misma lista
+        elif new_position is not None and new_position != old_position:
+            was_reordered = True
+
+            # Validar posición dentro de la misma lista
+            max_position = (
+                db.session.query(db.func.max(Card.position))
+                .filter_by(list_id=card.list_id)
+                .scalar()
+            )
+            if new_position < 0 or new_position > max_position:
+                return jsonify({
+                    "error": f"Posición inválida. Debe estar entre 0 y {max_position}"
+                }), 400
+            
+            # ESTRATEGIA DE REORDENAMIENTO
+            if new_position < old_position:
+                # Mover hacia abajo: decrementar posiciones intermedias
+                db.session.query(Card).filter(
+                    Card.list_id == card.list_id,
+                    Card.position > old_position,
+                    Card.position <= new_position
+                ).update({Card.position: Card.position - 1})
+            else:
+                # Mover hacia arriba: incrementar posiciones intermedias
+                db.session.query(Card).filter(
+                    Card.list_id == card.list_id,
+                    Card.position < old_position,
+                    Card.position >= new_position
+                ).update({Card.position: Card.position + 1})
+
+            # Actualizar posición de la tarjeta
+            card.position = new_position
+
+            logger.info(f"Tarjeta {card_id} reordenada en lista {card.list_id} de posición {old_position} a {new_position}")
+
         if "title" in data:
             if not data["title"].strip():
                 return jsonify({"error": "El título no puede estar vacío"}), 400
@@ -482,6 +538,8 @@ def update_card(board_id, list_id, card_id):
 
         if was_moved:
             broadcast_card_moved(board_id, card.to_dict(), user_id)
+        elif was_reordered:
+            broadcast_card_reordered(board_id, card.to_dict(), user_id)
         else:
             broadcast_card_updated(board_id, card.to_dict(), user_id)
 

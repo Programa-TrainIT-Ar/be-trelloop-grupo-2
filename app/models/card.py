@@ -37,6 +37,8 @@ class Card(db.Model):
         passive_deletes=True
     )
 
+    notifications = db.relationship('Notification', back_populates='card', cascade='all, delete-orphan', passive_deletes=True)
+    comments = db.relationship('CardComment', back_populates='card', cascade='all, delete-orphan', passive_deletes=True)
     def to_dict(self):
         """Convert card to dictionary for API responses"""
         # Mapear prioridades para el frontend
@@ -60,23 +62,32 @@ class Card(db.Model):
             'end_date': self.end_date.date().isoformat() if self.end_date else None,
             'reminder_message': self.reminder_message,
             'assignees': [user.to_dict_basic() for user in self.assignees] if self.assignees else [],
+            'board_members': [
+            {
+                **ub.user.to_dict_basic(),
+                "role": ub.role.value
+            }
+            for ub in (self.list.board.userboard_relationships if self.list and self.list.board else [])
+            ],
             'tags': [
                 {
                     'id': tag.id,
                     'name': tag.name
                 } for tag in self.tags
-            ] if self.tags else []
+            ] if self.tags else [],
+            'comments': [comment.to_dict() for comment in self.comments] if self.comments else []
         }
 
 
 class CardComment(db.Model):
     """Card comment model for user comments on cards"""
-    tablename = 'card_comments'
+    __tablename__ = 'card_comments'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), nullable=False)
+    card_id = db.Column(db.Integer, db.ForeignKey('cards.id', ondelete='CASCADE'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     comment = db.Column(db.Text, nullable=False)
+    card = db.relationship("Card", back_populates="comments")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):

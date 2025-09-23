@@ -1,0 +1,99 @@
+tags:
+  - Comments
+summary: Obtiene todos los comentarios de una tarjeta específica.
+operationId: getCommentsByCard
+description: |
+  Este endpoint permite a un usuario autenticado obtener todos los comentarios
+  asociados a una tarjeta específica dentro de una lista y un tablero.
+  Los comentarios se devuelven ordenados por fecha de creación (más recientes primero).
+security:
+  - BearerAuth: []
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero que contiene la lista y la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+  - name: list_id
+    in: path
+    description: El ID único de la lista que contiene la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 10
+  - name: card_id
+    in: path
+    description: El ID único de la tarjeta cuyos comentarios se desean obtener.
+    required: true
+    type: integer
+    format: int64
+    example: 50
+responses:
+  200:
+    description: Lista de comentarios obtenida exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        card_title:
+          type: string
+          description: Título de la tarjeta a la que pertenecen los comentarios.
+          example: Implementar autenticación de usuarios
+        comments:
+          type: array
+          description: Lista de comentarios de la tarjeta.
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 101
+              card_id:
+                type: integer
+                example: 50
+              user_id:
+                type: integer
+                example: 2
+              comment:
+                type: string
+                example: "Revisemos la validación de fechas antes del merge."
+              created_at:
+                type: string
+                format: date-time
+                example: "2025-09-23T14:00:00.000Z"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero, lista o tarjeta no encontrados, o el usuario no tiene acceso al tablero.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            tablero_no_encontrado: "Tablero 1 no encontrado o sin acceso"
+            lista_no_encontrada: "Lista 10 no encontrada en el tablero"
+            tarjeta_no_encontrada: "Tarjeta 50 no encontrada en la lista"
+  500:
+    description: Error interno del servidor al intentar obtener los comentarios.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor

@@ -5,6 +5,7 @@ from .card import Card, CardComment, CardAssignee
 from .relationships import UserBoard
 from .tag import Tag
 from .card_tag import CardTag
+from .notification import Notification
 
 __all__ = [
     'User',
@@ -15,5 +16,6 @@ __all__ = [
     'Card',
     'CardTag',
     'CardComment',
-    'CardAssignee'
+    'CardAssignee',
+    'Notification'
 ]

@@ -1,0 +1,119 @@
+tags:
+  - Comments
+summary: Crea un nuevo comentario en una tarjeta específica.
+operationId: createComment
+description: |
+  Este endpoint permite a un usuario autenticado crear un comentario dentro de una tarjeta
+  perteneciente a una lista de un tablero.
+  El usuario debe ser miembro del tablero para poder comentar.
+security:
+  - BearerAuth: []
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero que contiene la lista y la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+  - name: list_id
+    in: path
+    description: El ID único de la lista que contiene la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 10
+  - name: card_id
+    in: path
+    description: El ID único de la tarjeta donde se agregará el comentario.
+    required: true
+    type: integer
+    format: int64
+    example: 50
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - comment
+      properties:
+        comment:
+          type: string
+          description: Texto del comentario. Máximo 1000 caracteres.
+          example: "Revisemos la validación de fechas antes del merge."
+responses:
+  201:
+    description: Comentario creado exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Comentario creado exitosamente
+        comment:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 101
+            card_id:
+              type: integer
+              example: 50
+            user_id:
+              type: integer
+              example: 2
+            comment:
+              type: string
+              example: "Revisemos la validación de fechas antes del merge."
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-09-23T14:00:00.000Z"
+  400:
+    description: Petición inválida debido a campos faltantes o formato incorrecto.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            campo_requerido: "El campo 'comment' es requerido"
+            comentario_largo: "El comentario no puede exceder 1000 caracteres"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero, lista o tarjeta no encontrados, o el usuario no tiene acceso al tablero.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            tablero_no_encontrado: "Tablero 1 no encontrado o sin acceso"
+            lista_no_encontrada: "Lista 10 no encontrada en el tablero"
+            tarjeta_no_encontrada: "Tarjeta 50 no encontrada en la lista"
+  500:
+    description: Error interno del servidor al intentar crear el comentario.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor
