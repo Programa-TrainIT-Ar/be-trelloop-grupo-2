@@ -1,0 +1,74 @@
+tags:
+  - Notifications
+summary: Obtiene todas las notificaciones del usuario autenticado.
+operationId: getNotifications
+description: |
+  Este endpoint permite a un usuario autenticado obtener todas sus notificaciones.
+  Las notificaciones se devuelven ordenadas por fecha de creación (más recientes primero),
+  incluyendo el estado (leído/no leído) y la prioridad.
+security:
+  - BearerAuth: []
+produces:
+  - application/json
+responses:
+  200:
+    description: Lista de notificaciones obtenida exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        notifications:
+          type: array
+          description: Lista de notificaciones del usuario.
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 201
+              card_id:
+                type: integer
+                example: 50
+              description:
+                type: string
+                example: "Has sido asignado a la tarjeta 'Implementar autenticación de usuarios'."
+              status:
+                type: string
+                description: Estado de la notificación.
+                enum:
+                  - read
+                  - unread
+                example: unread
+              priority:
+                type: string
+                description: Prioridad de la notificación.
+                enum:
+                  - high
+                  - medium
+                  - low
+                example: low
+              created_at:
+                type: string
+                format: date-time
+                example: "2025-09-23T14:00:00.000Z"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  500:
+    description: Error interno del servidor al intentar obtener las notificaciones.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor

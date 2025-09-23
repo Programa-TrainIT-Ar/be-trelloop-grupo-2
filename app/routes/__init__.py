@@ -4,6 +4,7 @@ from .board_routes import board_bp
 from .list_routes import list_bp
 from .card_routes import card_bp
 from .comments_routes import comment_bp
+from .notification_routes import notification_bp
 
 all_blueprints = [
     register_bp,
@@ -11,4 +12,5 @@ all_blueprints = [
     list_bp,
     card_bp,
     comment_bp,
+    notification_bp,
     user_bp,]

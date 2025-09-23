@@ -1,0 +1,87 @@
+tags:
+  - Notifications
+summary: Marca una notificación específica como leída.
+operationId: markNotificationAsRead
+description: |
+  Este endpoint permite a un usuario autenticado cambiar el estado de una notificación
+  de `UNREAD` a `READ`. La notificación debe pertenecer al usuario que realiza la petición.
+security:
+  - BearerAuth: []
+produces:
+  - application/json
+parameters:
+  - name: notification_id
+    in: path
+    description: El ID único de la notificación que se desea marcar como leída.
+    required: true
+    type: integer
+    format: int64
+    example: 201
+responses:
+  200:
+    description: Notificación marcada como leída exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Notificación 201 marcada como leída"
+        notification:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 201
+            card_id:
+              type: integer
+              example: 50
+            description:
+              type: string
+              example: "Has sido asignado a la tarjeta 'Implementar autenticación de usuarios'."
+            status:
+              type: string
+              enum:
+                - read
+                - unread
+              example: read
+            priority:
+              type: string
+              enum:
+                - high
+                - medium
+                - low
+              example: low
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-09-23T14:00:00.000Z"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: La notificación no existe o no pertenece al usuario.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Notificación 201 no encontrada"
+  500:
+    description: Error interno del servidor al intentar actualizar la notificación.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor

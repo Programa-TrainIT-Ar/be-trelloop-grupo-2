@@ -2,12 +2,10 @@ from app.models.board import Board
 from app.models.card import Card, CardComment
 from app.models.list import List
 from app.models.relationships import UserBoard
-from app.models.user import User
 from app.database.database import db
 from flask import jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from ..logs.logger import logger
-from datetime import datetime, date
 
 def create_comment(board_id, list_id, card_id):
     """

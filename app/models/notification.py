@@ -32,7 +32,6 @@ class Notification(db.Model):
         return {
             'id': self.id,
             'description': self.description,
-            'status': self.status,
-            'priority': self.priority,
-            
+            'status': self.status.value if isinstance(self.status, enum.Enum) else self.status,
+            'priority': self.priority.value if isinstance(self.priority, enum.Enum) else self.priority,
         }
