@@ -48,6 +48,15 @@ app.debug = True
 app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
 app.config["JWT_SECRET_KEY"] = config["JWT_SECRET_KEY"]
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=config["JWT_ACCESS_TOKEN_EXPIRES"])
+
+app.config["PUSHER_APP_ID"] = config["PUSHER_APP_ID"]
+app.config["PUSHER_KEY"] = config["PUSHER_KEY"]
+app.config["PUSHER_SECRET"] = config["PUSHER_SECRET"]
+app.config["PUSHER_CLUSTER"] = config["PUSHER_CLUSTER"]
+app.config["RESEND_API_KEY"] = config["RESEND_API_KEY"]
+app.config["RESEND_FROM_EMAIL"] = config["RESEND_FROM_EMAIL"]
+app.config["FRONTEND_URL"] = config["FRONTEND_URL"]
+
 socketio = SocketIO(
      app, 
      cors_allowed_origins=config["CORS_ORIGINS"],
