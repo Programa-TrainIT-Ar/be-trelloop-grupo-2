@@ -290,7 +290,7 @@ def update_card(board_id, list_id, card_id):
     try:
         user_id = int(get_jwt_identity())
         data = request.get_json()
-        
+
         # Verificar acceso al tablero
         board = (
             db.session.query(Board)
@@ -300,8 +300,8 @@ def update_card(board_id, list_id, card_id):
         )
         if not board:
             return jsonify({"error": "Tablero no encontrado"}), 404
-        
-        # Buscar la tarjeta (NOTA: puede estar en cualquier lista del board)
+
+        # Buscar la tarjeta
         card = (
             db.session.query(Card)
             .join(List, List.id == Card.list_id)
@@ -309,233 +309,108 @@ def update_card(board_id, list_id, card_id):
             .first()
         )
         if not card:
-            return jsonify({"error": "Tarjeta no encontrada en la lista especificada"}), 404
-        
-        # Variable para detectar si la tarjeta fue movida
-        was_moved = False
-        was_reordered = False
+            return jsonify({"error": "Tarjeta no encontrada en la lista"}), 404
+
         old_list_id = card.list_id
         old_position = card.position
-        
-        # FUNCIONALIDAD DRAG & DROP
-        new_list_id = data.get("list_id", card.list_id)
-        new_position = data.get("position")
+        new_list_id = data.get("list_id", old_list_id)
+        new_position = data.get("position", old_position)
 
-        # validar que la lista destino existe y pertenece al mismo board
-        if new_list_id != card.list_id:
-            target_list = (
-                db.session.query(List)
-                .filter_by(id=new_list_id, board_id=board_id)
-                .first()
-            )
-            
+        was_moved = new_list_id != old_list_id
+        was_reordered = not was_moved and new_position != old_position
+
+        # Validar lista destino si se mueve
+        if was_moved:
+            target_list = db.session.query(List).filter_by(id=new_list_id, board_id=board_id).first()
             if not target_list:
-                return jsonify({
-                    "error": f"La lista destino {new_list_id} no existe o no pertenece al tablero {board_id}"
-                }), 400
-            
-        # CASO 1: Mover entre listas diferentes
-        if new_list_id != card.list_id:
-            was_moved = True
-                
-            # Determinar posición en lista destino
-            if new_position is not None:
-                # Validar posición específica
-                max_position = (
-                    db.session.query(db.func.max(Card.position))
-                    .filter_by(list_id=new_list_id)
-                    .scalar() or -1
-                )
+                return jsonify({"error": "Lista destino inválida"}), 400
 
-                if new_position < 0 or new_position > max_position + 1:
-                    return jsonify({
-                        "error": f"Posición inválida. Debe estar entre 0 y {max_position + 1}"
-                    }), 400
-                    
-                target_position = new_position
-            else:
-                # Colocar al final por defecto
-                last_card_in_target = (
-                    db.session.query(Card)
-                    .filter_by(list_id=new_list_id)
-                    .order_by(Card.position.desc())
-                    .first()
-                )
-                target_position = 0 if not last_card_in_target else last_card_in_target.position + 1
-                
-            # Reorganizar lista origen (cerrar el gap)
-            db.session.query(Card).filter(
-                Card.list_id == old_list_id,
-                Card.position > old_position
-            ).update({Card.position: Card.position - 1})
+        # ----- OBTENER TODAS LAS TARJETAS ORDENADAS -----
+        source_cards = db.session.query(Card).filter_by(list_id=old_list_id).order_by(Card.position).all()
+        target_cards = db.session.query(Card).filter_by(list_id=new_list_id).order_by(Card.position).all() if was_moved else source_cards
 
-            # Hacer espacio en lista destino (abrir gap)
-            db.session.query(Card).filter(
-                Card.list_id == new_list_id,
-                Card.position >= target_position
-            ).update({Card.position: Card.position + 1})
-                
-            # Actualizar tarjeta
+        # ----- REORDENAMIENTO -----
+        if was_moved:
+            # Quitar tarjeta de la lista origen
+            source_cards.remove(card)
+            for idx, c in enumerate(source_cards):
+                c.position = idx
+
+            # Insertar tarjeta en la lista destino
+            if new_position < 0:
+                new_position = 0
+            elif new_position > len(target_cards):
+                new_position = len(target_cards)
+
+            target_cards.insert(new_position, card)
+            for idx, c in enumerate(target_cards):
+                c.position = idx
+
             card.list_id = new_list_id
-            card.position = target_position
-                
-            logger.info(f"Tarjeta {card_id} movida de lista {old_list_id}:{old_position} a lista {new_list_id}:{target_position}")
-        
-        # CASO 2: Reordenar dentro de la misma lista
-        elif new_position is not None and new_position != old_position:
-            was_reordered = True
 
-            # Validar posición dentro de la misma lista
-            max_position = (
-                db.session.query(db.func.max(Card.position))
-                .filter_by(list_id=card.list_id)
-                .scalar()
-            )
-            if new_position < 0 or new_position > max_position:
-                return jsonify({
-                    "error": f"Posición inválida. Debe estar entre 0 y {max_position}"
-                }), 400
-            
-            # ESTRATEGIA DE REORDENAMIENTO
-            if new_position < old_position:
-                # Mover hacia abajo: decrementar posiciones intermedias
-                db.session.query(Card).filter(
-                    Card.list_id == card.list_id,
-                    Card.position > old_position,
-                    Card.position <= new_position
-                ).update({Card.position: Card.position - 1})
-            else:
-                # Mover hacia arriba: incrementar posiciones intermedias
-                db.session.query(Card).filter(
-                    Card.list_id == card.list_id,
-                    Card.position < old_position,
-                    Card.position >= new_position
-                ).update({Card.position: Card.position + 1})
+        elif was_reordered:
+            # Reordenamiento dentro de la misma lista
+            if new_position < 0:
+                new_position = 0
+            elif new_position >= len(source_cards):
+                new_position = len(source_cards) - 1
 
-            # Actualizar posición de la tarjeta
-            card.position = new_position
+            source_cards.remove(card)
+            source_cards.insert(new_position, card)
+            for idx, c in enumerate(source_cards):
+                c.position = idx
 
-            logger.info(f"Tarjeta {card_id} reordenada en lista {card.list_id} de posición {old_position} a {new_position}")
+        # ----- ACTUALIZACIÓN DE CAMPOS -----
+        for field in ["title", "description", "priority", "status", "start_date", "end_date", "reminder_date", "reminder_message"]:
+            if field in data:
+                value = data[field]
+                if field in ["start_date", "end_date", "reminder_date"] and value:
+                    try:
+                        setattr(card, field, datetime.strptime(value, "%Y-%m-%d"))
+                    except ValueError:
+                        return jsonify({"error": f"Formato de {field} inválido. Use YYYY-MM-DD"}), 400
+                else:
+                    setattr(card, field, value)
 
-        if "title" in data:
-            if not data["title"].strip():
-                return jsonify({"error": "El título no puede estar vacío"}), 400
-            card.title = data["title"].strip()
-        
-        if "description" in data:
-            card.description = data["description"].strip()
-        
-        if "priority" in data:
-            valid_priorities = ["low", "medium", "high"]
-            if data["priority"] and data["priority"] not in valid_priorities:
-                return jsonify({"error": f"Prioridad debe ser: {', '.join(valid_priorities)}"}), 400
-            card.priority = data["priority"]
-        
-        if "status" in data:
-            card.status = data["status"]
-               
-        if "start_date" in data:
-            start_date_str = data["start_date"]
-            if start_date_str:
-                try:
-                    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-                    card.start_date = start_date
-                except ValueError:
-                    return jsonify({"error": "Formato de fecha de inicio inválido. Use YYYY-MM-DD"}), 400
-            else:
-                card.start_date = None
-        
-        if "end_date" in data:
-            end_date_str = data["end_date"]
-            if end_date_str:
-                try:
-                    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-                    if card.start_date and end_date < card.start_date:
-                        return jsonify({"error": "La fecha de vencimiento debe ser posterior o igual a la fecha de inicio"}), 400
-                    card.end_date = end_date
-                except ValueError:
-                    return jsonify({"error": "Formato de fecha de vencimiento inválido. Use YYYY-MM-DD"}), 400
-            else:
-                card.end_date = None
-        # Reminder date
-        if "reminder_date" in data:
-            reminder_date_str = data["reminder_date"]
-            if reminder_date_str:
-                try:
-                    reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d")
-                    # Validar que sea >= start_date
-                    if card.start_date and reminder_date < card.start_date:
-                        return jsonify({"error": "La fecha de recordatorio no puede ser anterior a la fecha de inicio"}), 400
-                    # Validar que sea <= end_date
-                    if card.end_date and reminder_date > card.end_date:
-                        return jsonify({"error": "La fecha de recordatorio no puede ser posterior a la fecha de finalización"}), 400
-                    card.reminder_date = reminder_date
-                except ValueError:
-                    return jsonify({"error": "Formato de fecha de recordatorio inválido. Use YYYY-MM-DD"}), 400
-            else:
-                card.reminder_date = None
-                
-        if "reminder_message" in data:
-            card.reminder_message = data["reminder_message"]
-
-        # Validar y asignar responsables usando búsqueda flexible
+        # ----- ASIGNADOS -----
         if "assignee_ids" in data:
-            identifiers = data["assignee_ids"]  # lista de ID, email o nombres
             found_members = []
-
-            if identifiers:
-                for identifier in identifiers:
-                    user = None
-
-                    # ID numérico
-                    if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
-                        user = User.query.get(int(identifier))
-
-                    # Email
-                    elif isinstance(identifier, str) and "@" in identifier:
-                        user = User.query.filter_by(email=identifier.lower()).first()
-
-                    # Nombre o parte del nombre
-                    elif isinstance(identifier, str):
-                        user = (
-                            db.session.query(User)
-                            .join(UserBoard, UserBoard.user_id == User.id)
-                            .filter(UserBoard.board_id == board_id)
-                            .filter(User.name.ilike(f"%{identifier.strip()}%"))
-                            .first()
-                        )
-
-                    if user and user not in found_members:
-                        found_members.append(user)
-
-                if not found_members:
-                    return jsonify({"error": "No se encontraron responsables válidos"}), 400
-
+            for identifier in data["assignee_ids"]:
+                user = None
+                if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
+                    user = User.query.get(int(identifier))
+                elif isinstance(identifier, str) and "@" in identifier:
+                    user = User.query.filter_by(email=identifier.lower()).first()
+                elif isinstance(identifier, str):
+                    user = (
+                        db.session.query(User)
+                        .join(UserBoard, UserBoard.user_id == User.id)
+                        .filter(UserBoard.board_id == board_id)
+                        .filter(User.name.ilike(f"%{identifier.strip()}%"))
+                        .first()
+                    )
+                if user and user not in found_members:
+                    found_members.append(user)
             card.assignees = found_members
-        
-        # Actualizar tags como lista de nombres
+
+        # ----- TAGS -----
         if "tags" in data:
-            new_tag_names = data["tags"]  # lista de strings
-            card.tags = []  # Limpiar tags actuales
-            if new_tag_names:
-                for tag_name in new_tag_names:
-                    tag_name = tag_name.strip().lower()
-                    if not tag_name:
-                        continue
-
-                    # Buscar tag en el board
-                    tag = CardTag.query.filter_by(name=tag_name, board_id=board_id).first()
-                    if not tag:
-                        tag = CardTag(name=tag_name, board_id=board_id)
-                        db.session.add(tag)
-                        db.session.flush()  # para obtener ID
-
-                    if tag not in card.tags:
-                        card.tags.append(tag)
+            card.tags = []
+            for tag_name in data["tags"]:
+                tag_name = tag_name.strip().lower()
+                if not tag_name:
+                    continue
+                tag = CardTag.query.filter_by(name=tag_name, board_id=board_id).first()
+                if not tag:
+                    tag = CardTag(name=tag_name, board_id=board_id)
+                    db.session.add(tag)
+                    db.session.flush()
+                card.tags.append(tag)
 
         db.session.commit()
         db.session.refresh(card)
 
+        # ----- BROADCAST -----
         if was_moved:
             broadcast_card_moved(board_id, card.to_dict(), user_id)
         elif was_reordered:
@@ -552,10 +427,7 @@ def update_card(board_id, list_id, card_id):
     except Exception as e:
         logger.error(f"Error al actualizar tarjeta {card_id}: {str(e)}")
         db.session.rollback()
-        return jsonify({
-            "success": False, 
-            "message": "Error interno del servidor"
-        }), 500
+        return jsonify({"success": False, "message": "Error interno del servidor"}), 500
 
 def delete_card(board_id, list_id, card_id):
     try:
