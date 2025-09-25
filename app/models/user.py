@@ -23,6 +23,8 @@ class User(db.Model):
     cascade="all, delete-orphan",
     passive_deletes=True
     )
+    notifications = db.relationship('Notification', back_populates='user', passive_deletes=True)
+
     def set_password(self, password):
         salt = bcrypt.gensalt()
         hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
