@@ -5,13 +5,13 @@ from sqlalchemy import Enum as SQLEnum
 
 
 class NotificationPriorityEnum(enum.Enum):
-    ALTA = "alta"
-    MEDIA = "media"
-    BAJA = "baja"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
 
 class StatusNotificationEnum(enum.Enum):
-    LEIDA = "leida"
-    NO_LEIDA = "no_leida"
+    READ = "read"
+    UNREAD = "unread"
 
 
 class Notification(db.Model):
@@ -22,8 +22,8 @@ class Notification(db.Model):
     card_id = db.Column(db.Integer, db.ForeignKey('cards.id', ondelete='CASCADE'), nullable=False)
     card_title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    status = db.Column(SQLEnum(StatusNotificationEnum, name = 'status', create_type=True), nullable=False, default=StatusNotificationEnum.NO_LEIDA)
-    priority = db.Column(SQLEnum(NotificationPriorityEnum, name = 'priority', create_type=True), nullable=False, default=NotificationPriorityEnum.BAJA)
+    status = db.Column(SQLEnum(StatusNotificationEnum, name = 'status', create_type=True), nullable=False, default=StatusNotificationEnum.UNREAD)
+    priority = db.Column(SQLEnum(NotificationPriorityEnum, name = 'priority', create_type=True), nullable=False, default=NotificationPriorityEnum.LOW)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", back_populates='notifications')

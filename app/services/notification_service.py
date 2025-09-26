@@ -1,7 +1,7 @@
 import pusher
 import resend
 from ..config.config import config
-from ..models.notification import Notification
+from ..models.notification import Notification, NotificationPriorityEnum, StatusNotificationEnum
 from ..database.database import db
 from ..logs.logger import logger
 from datetime import datetime
@@ -25,23 +25,29 @@ class NotificationService:
         Crear notificación cuando se asigna un responsable a una tarjeta
         """
         try:
-            # Mapear prioridad de la tarjeta
+            # Mapear prioridad de la tarjeta (string -> enum)
             priority_map = {
-                'low': 'baja',
-                'medium': 'media', 
-                'high': 'alta'
+                "low": NotificationPriorityEnum.LOW,
+                "medium": NotificationPriorityEnum.MEDIUM,
+                "high": NotificationPriorityEnum.HIGH
             }
             
-            # Crear registro en BD
+            # Crear registro en BD usando enums
             notification = Notification(
                 user_id=user.id,
                 card_id=card.id,
-                titulo_tarjeta=card.title,
-                descripcion=f"Te han asignado como responsable de la tarjeta '{card.title}' por {assigned_by_user.name} {assigned_by_user.last_name}",
-                estado='no_leida',
-                prioridad=priority_map.get(card.priority, 'media')
+                card_title=card.title,
+                description=(
+                    f"Te han asignado como responsable de la tarjeta "
+                    f"'{card.title}' por {assigned_by_user.name} {assigned_by_user.last_name}"
+                ),
+                status=StatusNotificationEnum.UNREAD,  
+                priority=priority_map.get(card.priority, NotificationPriorityEnum.MEDIUM)  
             )
-            
+
+            print("DEBUG status:", StatusNotificationEnum.UNREAD, type(StatusNotificationEnum.UNREAD))
+            print("DEBUG priority:", priority_map.get(card.priority, NotificationPriorityEnum.MEDIUM), type(priority_map.get(card.priority, NotificationPriorityEnum.MEDIUM)))
+
             db.session.add(notification)
             db.session.commit()
             
@@ -58,6 +64,7 @@ class NotificationService:
             logger.error(f"Error creando notificación: {str(e)}")
             db.session.rollback()
             return None
+
     
     def _send_pusher_notification(self, user_id, notification):
         """
@@ -68,11 +75,11 @@ class NotificationService:
             event_data = {
                 'id': notification.id,
                 'title': 'Nueva tarea asignada',
-                'message': notification.descripcion,
+                'message': notification.description,
                 'card_id': notification.card_id,
-                'card_title': notification.titulo_tarjeta,
-                'priority': notification.prioridad,
-                'timestamp': notification.fecha_creacion.isoformat(),
+                'card_title': notification.card_title,
+                'priority': notification.priority.value,  # usar el valor del enum
+                'timestamp': notification.created_at.isoformat(),
                 'type': 'task_assignment'
             }
             
@@ -87,17 +94,15 @@ class NotificationService:
         Enviar email via Resend.com
         """
         try:
-            # Crear URL para ir a la tarjeta específica
             card_url = f"{config['FRONTEND_URL']}/boards/{card.list.board_id}/cards/{card.id}"
             
-            # Mapear prioridad para mostrar
+            # Mapear prioridad para mostrar en email
             priority_display = {
-                'baja': 'Baja',
-                'media': 'Media',
-                'alta': 'Alta'
+                'low': 'Baja',
+                'medium': 'Media',
+                'high': 'Alta'
             }
             
-            # HTML del email
             html_content = f"""
             <!DOCTYPE html>
             <html>
@@ -109,9 +114,9 @@ class NotificationService:
                     .header {{ background: #0079bf; color: white; padding: 20px; text-align: center; }}
                     .content {{ padding: 20px; background: #f8f9fa; }}
                     .card-info {{ background: white; padding: 15px; border-radius: 8px; margin: 15px 0; }}
-                    .priority-alta {{ color: #bf2600; font-weight: bold; }}
-                    .priority-media {{ color: #ff8b00; font-weight: bold; }}
-                    .priority-baja {{ color: #006644; font-weight: bold; }}
+                    .priority-high {{ color: #bf2600; font-weight: bold; }}
+                    .priority-medium {{ color: #ff8b00; font-weight: bold; }}
+                    .priority-low {{ color: #006644; font-weight: bold; }}
                     .button {{ display: inline-block; padding: 12px 24px; background: #0079bf; color: white; text-decoration: none; border-radius: 6px; margin: 15px 0; }}
                     .footer {{ text-align: center; color: #666; font-size: 12px; padding: 20px; }}
                 </style>
@@ -128,10 +133,10 @@ class NotificationService:
                         <div class="card-info">
                             <h3>{card.title}</h3>
                             <p><strong>Descripción:</strong> {card.description or 'Sin descripción'}</p>
-                            <p><strong>Prioridad:</strong> <span class="priority-{notification.prioridad}">{priority_display[notification.prioridad]}</span></p>
+                            <p><strong>Prioridad:</strong> <span class="priority-{notification.priority.value}">{priority_display[notification.priority.value]}</span></p>
                             <p><strong>Lista:</strong> {card.list.name if card.list else 'Sin lista'}</p>
-                            {f'<p><strong>Fecha de inicio:</strong> {card.start_date.strftime("%d/%m/%Y") if card.start_date else "No definida"}</p>' if card.start_date else ''}
-                            {f'<p><strong>Fecha límite:</strong> {card.end_date.strftime("%d/%m/%Y") if card.end_date else "No definida"}</p>' if card.end_date else ''}
+                            {f'<p><strong>Fecha de inicio:</strong> {card.start_date.strftime("%d/%m/%Y")}</p>' if card.start_date else ''}
+                            {f'<p><strong>Fecha límite:</strong> {card.end_date.strftime("%d/%m/%Y")}</p>' if card.end_date else ''}
                         </div>
                         
                         <a href="{card_url}" class="button">Ver Tarea</a>
@@ -147,7 +152,6 @@ class NotificationService:
             </html>
             """
             
-            # Enviar email
             resend.Emails.send({
                 "from": config["RESEND_FROM_EMAIL"],
                 "to": [user.email],
@@ -162,18 +166,12 @@ class NotificationService:
             logger.error(f"Error enviando email: {str(e)}")
     
     def check_existing_notification(self, user_id, card_id):
-        """
-        Verificar si ya existe una notificación para este usuario y tarjeta
-        """
         return Notification.query.filter_by(
             user_id=user_id, 
             card_id=card_id
         ).first()
     
     def mark_as_read(self, notification_id, user_id):
-        """
-        Marcar notificación como leída
-        """
         try:
             notification = Notification.query.filter_by(
                 id=notification_id, 
@@ -181,7 +179,7 @@ class NotificationService:
             ).first()
             
             if notification:
-                notification.estado = 'leida'
+                notification.status = StatusNotificationEnum.LEIDA
                 db.session.commit()
                 return True
             return False
