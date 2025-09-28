@@ -94,7 +94,7 @@ class NotificationService:
         Enviar email via Resend.com
         """
         try:
-            card_url = f"{config['FRONTEND_URL']}/boards/{card.list.board_id}/cards/{card.id}"
+            card_url = f"{config['FRONTEND_URL']}/boardList/{card.list.board_id}/lists/{card.list_id}/card/{card.id}"
             
             # Mapear prioridad para mostrar en email
             priority_display = {
