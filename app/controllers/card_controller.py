@@ -10,6 +10,7 @@ from flask_jwt_extended import get_jwt_identity
 from ..logs.logger import logger
 from datetime import datetime, date
 from ..websocket.broadcast import (broadcast_card_moved, broadcast_card_updated, broadcast_card_created, broadcast_card_deleted, broadcast_card_reordered)
+from ..services.notification_service import notification_service
 
 def create_card(board_id, list_id):
     """
@@ -175,6 +176,16 @@ def create_card(board_id, list_id):
                     new_card.tags.append(tag)
         db.session.commit()
         db.session.refresh(new_card)
+
+        # Crear notificaciones para los responsables asignados
+        if valid_assignees:
+            assigned_by_user = User.query.get(user_id)
+            for assignee in valid_assignees:
+                notification_service.create_assignment_notification(
+                    user=assignee,
+                    card=new_card,
+                    assigned_by_user=assigned_by_user
+                )
         
         broadcast_card_created(board_id, new_card.to_dict(), user_id)
 
@@ -316,6 +327,9 @@ def update_card(board_id, list_id, card_id):
         was_reordered = False
         old_list_id = card.list_id
         old_position = card.position
+        
+        # Guardar responsables actuales para comparar cambios
+        old_assignees = set(assignee.id for assignee in card.assignees)
         
         # FUNCIONALIDAD DRAG & DROP
         new_list_id = data.get("list_id", card.list_id)
@@ -513,6 +527,29 @@ def update_card(board_id, list_id, card_id):
 
             card.assignees = found_members
         
+            # Determinar nuevos responsables asignados para notificaciones
+            new_assignees = set (member.id for member in found_members)
+            newly_assigned = new_assignees - old_assignees
+
+            # Crear notificaciones sólo para nuevos responsables
+            if newly_assigned:
+                assigned_by_user = User.query.get(user_id)
+                for assignee_id in newly_assigned:
+                    assignee = User.query.get(assignee_id)
+                    if assignee:
+                        # Verificar que no exista ya una notificación
+                        existing_notification = notification_service.check_existing_notification(
+                            assignee_id, card_id
+                        )
+
+                        if not existing_notification:
+                            notification_service.create_assignment_notification(
+                                user=assignee,
+                                card=card,
+                                assigned_by_user=assigned_by_user
+                            )
+                            logger.info(f"Notificación enviada a nuevo responsable {assignee_id} para tarjeta {card_id}")
+
         # Actualizar tags como lista de nombres
         if "tags" in data:
             new_tag_names = data["tags"]  # lista de strings

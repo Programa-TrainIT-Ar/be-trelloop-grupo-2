@@ -19,6 +19,14 @@ config = {
     "CLOUDINARY_API_KEY": get_env_variable("CLOUDINARY_API_KEY"),
     "CLOUDINARY_API_SECRET": get_env_variable("CLOUDINARY_API_SECRET"),
 
+    "PUSHER_APP_ID": get_env_variable("PUSHER_APP_ID"),
+    "PUSHER_KEY": get_env_variable("PUSHER_KEY"),
+    "PUSHER_SECRET": get_env_variable("PUSHER_SECRET"),
+    "PUSHER_CLUSTER": get_env_variable("PUSHER_CLUSTER"),
+
+    "RESEND_API_KEY": get_env_variable("RESEND_API_KEY"),
+    "RESEND_FROM_EMAIL": get_env_variable("RESEND_FROM_EMAIL"),
+    "FRONTEND_URL": get_env_variable("FRONTEND_URL"),
 }
 
 
