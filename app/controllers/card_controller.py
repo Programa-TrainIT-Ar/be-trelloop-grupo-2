@@ -10,6 +10,7 @@ from flask_jwt_extended import get_jwt_identity
 from ..logs.logger import logger
 from datetime import datetime, date
 from ..websocket.broadcast import (broadcast_card_moved, broadcast_card_updated, broadcast_card_created, broadcast_card_deleted, broadcast_card_reordered)
+from ..services.notification_service import notification_service
 
 def create_card(board_id, list_id):
     """
@@ -175,6 +176,16 @@ def create_card(board_id, list_id):
                     new_card.tags.append(tag)
         db.session.commit()
         db.session.refresh(new_card)
+
+        # Crear notificaciones para los responsables asignados
+        if valid_assignees:
+            assigned_by_user = User.query.get(user_id)
+            for assignee in valid_assignees:
+                notification_service.create_assignment_notification(
+                    user=assignee,
+                    card=new_card,
+                    assigned_by_user=assigned_by_user
+                )
         
         broadcast_card_created(board_id, new_card.to_dict(), user_id)
 
@@ -313,11 +324,28 @@ def update_card(board_id, list_id, card_id):
 
         old_list_id = card.list_id
         old_position = card.position
+
+        # Guardar responsables actuales para comparar cambios (puede ser vacío)
+        old_assignees = set(assignee.id for assignee in card.assignees) if card.assignees else set()
+
+        # FUNCIONALIDAD DRAG & DROP
         new_list_id = data.get("list_id", old_list_id)
         new_position = data.get("position", old_position)
 
+        # Normalizar new_position a int cuando venga como string (seguro y no rompedor)
+        try:
+            if new_position is None:
+                new_position = old_position
+            elif isinstance(new_position, str):
+                new_position = int(new_position)
+            else:
+                # si viene float/otro, intentamos convertir a int
+                new_position = int(new_position)
+        except Exception:
+            new_position = old_position
+
         was_moved = new_list_id != old_list_id
-        was_reordered = not was_moved and new_position != old_position
+        was_reordered = (not was_moved) and (new_position != old_position)
 
         # Validar lista destino si se mueve
         if was_moved:
@@ -327,12 +355,17 @@ def update_card(board_id, list_id, card_id):
 
         # ----- OBTENER TODAS LAS TARJETAS ORDENADAS -----
         source_cards = db.session.query(Card).filter_by(list_id=old_list_id).order_by(Card.position).all()
-        target_cards = db.session.query(Card).filter_by(list_id=new_list_id).order_by(Card.position).all() if was_moved else source_cards
+        target_cards = (
+            db.session.query(Card).filter_by(list_id=new_list_id).order_by(Card.position).all()
+            if was_moved
+            else source_cards
+        )
 
         # ----- REORDENAMIENTO -----
         if was_moved:
             # Quitar tarjeta de la lista origen
-            source_cards.remove(card)
+            if card in source_cards:
+                source_cards.remove(card)
             for idx, c in enumerate(source_cards):
                 c.position = idx
 
@@ -355,13 +388,23 @@ def update_card(board_id, list_id, card_id):
             elif new_position >= len(source_cards):
                 new_position = len(source_cards) - 1
 
-            source_cards.remove(card)
+            if card in source_cards:
+                source_cards.remove(card)
             source_cards.insert(new_position, card)
             for idx, c in enumerate(source_cards):
                 c.position = idx
 
         # ----- ACTUALIZACIÓN DE CAMPOS -----
-        for field in ["title", "description", "priority", "status", "start_date", "end_date", "reminder_date", "reminder_message"]:
+        for field in [
+            "title",
+            "description",
+            "priority",
+            "status",
+            "start_date",
+            "end_date",
+            "reminder_date",
+            "reminder_message",
+        ]:
             if field in data:
                 value = data[field]
                 if field in ["start_date", "end_date", "reminder_date"] and value:
@@ -391,7 +434,32 @@ def update_card(board_id, list_id, card_id):
                     )
                 if user and user not in found_members:
                     found_members.append(user)
+
+            # Asignar los encontrados (puede quedar vacío si así se requiere)
             card.assignees = found_members
+
+            # Determinar nuevos responsables asignados para notificaciones
+            new_assignees = set(member.id for member in found_members) if found_members else set()
+            newly_assigned = new_assignees - old_assignees
+
+            # Crear notificaciones sólo para nuevos responsables
+            if newly_assigned:
+                assigned_by_user = User.query.get(user_id)
+                for assignee_id in newly_assigned:
+                    assignee = User.query.get(assignee_id)
+                    if assignee:
+                        # Verificar que no exista ya una notificación
+                        existing_notification = notification_service.check_existing_notification(
+                            assignee_id, card_id
+                        )
+
+                        if not existing_notification:
+                            notification_service.create_assignment_notification(
+                                user=assignee,
+                                card=card,
+                                assigned_by_user=assigned_by_user,
+                            )
+                            logger.info(f"Notificación enviada a nuevo responsable {assignee_id} para tarjeta {card_id}")
 
         # ----- TAGS -----
         if "tags" in data:
@@ -418,11 +486,10 @@ def update_card(board_id, list_id, card_id):
         else:
             broadcast_card_updated(board_id, card.to_dict(), user_id)
 
-        return jsonify({
-            "success": True,
-            "message": "Tarjeta actualizada exitosamente",
-            "card": card.to_dict()
-        }), 200
+        return (
+            jsonify({"success": True, "message": "Tarjeta actualizada exitosamente", "card": card.to_dict()}),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error al actualizar tarjeta {card_id}: {str(e)}")
