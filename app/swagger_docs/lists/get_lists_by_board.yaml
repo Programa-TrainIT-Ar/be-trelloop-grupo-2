@@ -1,0 +1,95 @@
+tags:
+  - Lists
+summary: Obtiene todas las listas de un tablero específico.
+operationId: getListsByBoard
+description: |
+  Este endpoint permite a un usuario autenticado obtener una lista de todas las listas
+  asociadas a un tablero específico, ordenadas por su posición.
+  Solo un miembro del tablero puede acceder a esta información.
+security:
+  - BearerAuth: []
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero del que se desean obtener las listas.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+responses:
+  200:
+    description: Lista de listas obtenida exitosamente.
+    schema:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: ID único de la lista.
+            example: 10
+          board_id:
+            type: integer
+            description: ID del tablero al que pertenece la lista.
+            example: 1
+          name:
+            type: string
+            description: Nombre de la lista.
+            example: Tareas Pendientes
+          position:
+            type: integer
+            description: Posición de la lista dentro del tablero.
+            example: 1
+          created_at:
+            type: string
+            format: date-time
+            description: Fecha y hora de creación de la lista en formato ISO 8601.
+            example: "2025-07-30T11:00:00.000Z"
+          cards:
+            type: array
+            description: Lista de tarjetas asociadas a esta lista.
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 50
+                name:
+                  type: string
+                  example: Completar documentación de la API
+                position:
+                  type: integer
+                  example: 1
+                due_date:
+                  type: string
+                  format: date-time
+                  example: "2025-08-15T00:00:00.000Z"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero no encontrado o el usuario no es miembro del tablero.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "El tablero con id: 1 no fue encontrado"
+  500:
+    description: Error interno del servidor al intentar obtener las listas.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error al obtener las listas

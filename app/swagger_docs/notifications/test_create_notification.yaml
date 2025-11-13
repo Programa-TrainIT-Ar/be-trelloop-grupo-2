@@ -1,0 +1,94 @@
+tags:
+  - Notifications
+summary: Crea una notificación de prueba para el usuario autenticado.
+operationId: testCreateNotification
+description: |
+  Este endpoint permite generar una notificación de prueba asociada al usuario autenticado.
+  Se puede especificar el `card_id` y la descripción de la notificación.
+  La prioridad se establece por defecto en `LOW` y el estado en `UNREAD`.
+security:
+  - BearerAuth: []
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: body
+    in: body
+    required: false
+    schema:
+      type: object
+      properties:
+        card_id:
+          type: integer
+          description: ID de la tarjeta a la que se asocia la notificación. Si no se especifica, se usa la primera tarjeta disponible.
+          example: 50
+        description:
+          type: string
+          description: Texto de la notificación.
+          example: "Notificación de prueba para validar el endpoint"
+responses:
+  201:
+    description: Notificación de prueba creada exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        notification:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 301
+            card_id:
+              type: integer
+              example: 50
+            description:
+              type: string
+              example: "Notificación de prueba para validar el endpoint"
+            status:
+              type: string
+              enum:
+                - read
+                - unread
+              example: unread
+            priority:
+              type: string
+              enum:
+                - high
+                - medium
+                - low
+              example: low
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-09-23T14:30:00.000Z"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  400:
+    description: Error al crear la notificación, por ejemplo, si no hay tarjetas disponibles.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "No hay tarjetas disponibles para crear notificación"
+  500:
+    description: Error interno del servidor al intentar crear la notificación.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor

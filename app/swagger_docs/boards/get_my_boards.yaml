@@ -1,0 +1,60 @@
+tags:
+  - Boards
+summary: Obtiene todos los tableros a los que pertenece el usuario autenticado.
+operationId: getMyBoards
+description: |
+  Este endpoint devuelve una lista de todos los tableros de los cuales el usuario autenticado es miembro.
+  Si el usuario no pertenece a ningun tablero, se devolvera una lista vacia con un mensaje indicativo.
+security:
+  - BearerAuth: []
+produces:
+  - application/json
+responses:
+  200:
+    description: Lista de tableros a los que el usuario pertenece obtenida exitosamente.
+    schema:
+      type: object
+      properties:
+        boards:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: ID unico del tablero.
+                example: 1
+              name:
+                type: string
+                description: Nombre del tablero.
+                example: Mi Tablero Personal
+              boardImageUrl:
+                type: string
+                format: url
+                description: URL de la imagen del tablero. Puede ser nulo.
+                example: https://example.com/personal_board.jpg
+              description:
+                type: string
+                description: Descripci\u00f3n del tablero.
+                example: Tareas personales y proyectos pequeños.
+              members:
+                type: array
+                description: Lista de miembros del tablero (informacion basica).
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: Juan
+                    lastName:
+                      type: string
+                      description: "Nota: 'lastName' en camelCase para la respuesta JSON"
+                      example: Perez
+              created_at:
+                type: string
+                format: date-time
+                description: Fecha y hora de creación del tablero en formato ISO 8601.
+                example: "2025-07-30T10:30:00.000Z"

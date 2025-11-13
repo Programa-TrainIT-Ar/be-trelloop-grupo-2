@@ -1,12 +1,33 @@
 from flask import Blueprint, jsonify
-from ..controllers.user_controller import get_users ,create_users
+from flask_jwt_extended import jwt_required
+from ..controllers.user_controller import get_users, login_users, protected_users, search_users, search_assignees
+
+from flasgger.utils import swag_from
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/users')
 
 @user_bp.route('/', methods=['GET'])
+@jwt_required()
+@swag_from('../swagger_docs/users/get_users.yaml')
 def list_users():
     return get_users()
 
-@user_bp.route('/', methods=['POST'])
-def handle_create_users():
-    return create_users()
+@user_bp.route('/login', methods=['POST'])
+@swag_from('../swagger_docs/auth/login.yaml')
+def handle_login_users():
+    return login_users()
+
+@user_bp.route('/protected', methods=['GET'])
+@jwt_required()
+def handle_protected_users():
+    return protected_users()
+
+@user_bp.route('/search', methods=['GET'])
+@jwt_required()
+def handle_search_users():
+    return search_users()
+
+@user_bp.route('/boards/<int:board_id>/search_assignees', methods=["GET"])
+@jwt_required()
+def handle_search_assignees(board_id):
+    return search_assignees(board_id)

@@ -12,17 +12,20 @@ def seed_users():
     # Test users list
     test_users = [
         {
-            'name': 'Juan Pérez',
+            'name': 'Juan',
+            'last_name': 'Pérez',
             'email': 'juan@ejemplo.com',
             'password': 'password123'
         },
         {
-            'name': 'María García',
+            'name': 'María',
+            'last_name': 'García',
             'email': 'maria@ejemplo.com',
             'password': 'password123'
         },
         {
-            'name': 'Carlos López',
+            'name': 'Carlos',
+            'last_name': 'López',
             'email': 'carlos@ejemplo.com',
             'password': 'password123'
         }
@@ -43,6 +46,7 @@ def seed_users():
         for user_data in test_users:
             user = User(
                 name=user_data['name'],
+                last_name=user_data['last_name'],
                 email=user_data['email']
             )
             user.set_password(user_data['password'])
@@ -55,7 +59,7 @@ def seed_users():
         
         print("✅ Test users created successfully:")
         for user in created_users:
-            print(f"- {user.name} ({user.email}) - ID: {user.id}")
+            print(f"- {user.name} {user.last_name} ({user.email}) - ID: {user.id}")
         
         print("\n📝 Access credentials:")
         print("Email: juan@ejemplo.com | Password: password123")

@@ -1,0 +1,234 @@
+tags:
+  - Cards
+summary: Crea una nueva tarjeta en una lista específica.
+operationId: createCard
+description: |
+  Este endpoint permite a un usuario autenticado crear una nueva tarjeta dentro de una lista específica de un tablero.
+  El usuario debe ser miembro del tablero para poder crear tarjetas.
+  Se pueden asignar responsables, etiquetas, fechas y configurar recordatorios al crear la tarjeta.
+security:
+  - BearerAuth: []
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  - name: board_id
+    in: path
+    description: El ID único del tablero que contiene la lista.
+    required: true
+    type: integer
+    format: int64
+    example: 1
+  - name: list_id
+    in: path
+    description: El ID único de la lista donde se creará la tarjeta.
+    required: true
+    type: integer
+    format: int64
+    example: 10
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: Título de la tarjeta. Es un campo obligatorio. Máximo 255 caracteres.
+          example: Implementar autenticación de usuarios
+        description:
+          type: string
+          description: Descripción detallada de la tarjeta.
+          example: Crear el sistema de login y registro con JWT tokens
+        priority:
+          type: string
+          description: |
+            Nivel de prioridad de la tarjeta. Opcional.
+            Si no se especifica, el valor por defecto es 'low'.
+          enum:
+            - low
+            - medium
+            - high
+          default: low
+          example: medium
+        status:
+          type: string
+          description: |
+            Estado actual de la tarjeta. Opcional.
+            Si no se especifica, el valor por defecto es 'pending'.
+          default: pending
+          example: pending
+        start_date:
+          type: string
+          format: date
+          description: Fecha de inicio de la tarjeta en formato YYYY-MM-DD. No puede ser anterior a hoy. Opcional.
+          example: "2025-09-10"
+        end_date:
+          type: string
+          format: date
+          description: Fecha de finalización de la tarjeta en formato YYYY-MM-DD. Debe ser posterior o igual a start_date. Opcional.
+          example: "2025-09-20"
+        reminder_date:
+          type: string
+          format: date
+          description: Fecha de recordatorio en formato YYYY-MM-DD. Debe estar entre start_date y end_date. Opcional.
+          example: "2025-09-15"
+        reminder_message:
+          type: string
+          description: Mensaje personalizado para el recordatorio. Opcional.
+          example: No olvides revisar los requisitos antes de implementar
+        tags:
+          type: array
+          description: Lista de nombres de etiquetas para asociar con la tarjeta. Las etiquetas que no existan serán creadas automáticamente. Opcional.
+          items:
+            type: string
+          example: ["backend", "autenticación", "alta prioridad"]
+        assignee_ids:
+          type: array
+          description: |
+            Lista de identificadores de usuarios responsables de la tarjeta. 
+            Puede ser ID numérico, email o nombre (búsqueda flexible). 
+            Los usuarios deben ser miembros del tablero. Opcional.
+          items:
+            oneOf:
+              - type: integer
+                description: ID numérico del usuario
+              - type: string
+                description: Email o nombre del usuario
+          example: [2, "juan@example.com", "María"]
+responses:
+  201:
+    description: Tarjeta creada exitosamente.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Tarjeta creada exitosamente
+        card:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: ID único de la tarjeta creada.
+              example: 50
+            title:
+              type: string
+              example: Implementar autenticación de usuarios
+            description:
+              type: string
+              example: Crear el sistema de login y registro con JWT tokens
+            list_id:
+              type: integer
+              example: 10
+            position:
+              type: integer
+              description: Posición de la tarjeta dentro de la lista.
+              example: 3
+            priority:
+              type: string
+              example: medium
+            status:
+              type: string
+              example: pending
+            start_date:
+              type: string
+              format: date-time
+              example: "2025-09-10T00:00:00.000Z"
+            end_date:
+              type: string
+              format: date-time
+              example: "2025-09-20T00:00:00.000Z"
+            reminder_date:
+              type: string
+              format: date-time
+              example: "2025-09-15T00:00:00.000Z"
+            reminder_message:
+              type: string
+              example: No olvides revisar los requisitos antes de implementar
+            created_at:
+              type: string
+              format: date-time
+              example: "2025-09-05T14:30:00.000Z"
+            assignees:
+              type: array
+              description: Lista de usuarios asignados a la tarjeta.
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 2
+                  name:
+                    type: string
+                    example: Juan Pérez
+                  email:
+                    type: string
+                    example: juan@example.com
+            tags:
+              type: array
+              description: Lista de etiquetas asociadas a la tarjeta.
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 15
+                  name:
+                    type: string
+                    example: backend
+                  board_id:
+                    type: integer
+                    example: 1
+  400:
+    description: |
+      Petición inválida debido a campos faltantes, formato incorrecto o validaciones fallidas.
+      La respuesta detallará el error específico.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            campo_requerido: "El campo 'title' es requerido"
+            titulo_largo: "El título no puede exceder 255 caracteres"
+            prioridad_invalida: "Prioridad debe ser: low, medium, high"
+            fecha_pasada: "La fecha de inicio no puede ser anterior a hoy"
+            fecha_inconsistente: "La fecha de finalización debe ser posterior o igual a la fecha de inicio"
+            recordatorio_invalido: "La fecha de recordatorio no puede ser anterior a la fecha de inicio"
+            responsables_invalidos: "No se encontraron responsables válidos"
+  401:
+    description: No autorizado. Un token JWT válido es requerido.
+    schema:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: Missing Authorization Header
+  404:
+    description: Tablero o lista no encontrados, o el usuario no tiene acceso al tablero.
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          examples:
+            tablero_no_encontrado: "Tablero 1 no encontrado o sin acceso"
+            lista_no_encontrada: "Lista 10 no encontrada en el tablero"
+  500:
+    description: Error interno del servidor al intentar crear la tarjeta.
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error interno del servidor
